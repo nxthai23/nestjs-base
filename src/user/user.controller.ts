@@ -16,6 +16,8 @@ import { JwtAuthGuard } from 'src/guard/jwt.auth.guard';
 import { ParseObjectIdPipe } from 'src/pipe/objectId.pipe';
 import { UserSerialize } from './interceptor/user.interceptor';
 
+// @TODO: add admin validation later for this controller
+
 @Controller('user')
 @UseGuards(JwtAuthGuard)
 @SerializeOptions({
@@ -28,7 +30,7 @@ export class UserController {
   @Get()
   fetch() {
     try {
-      return this.userService.fetch();
+      return this.userService.findAll();
     } catch (err) {
       return new BadRequestException(err.message);
     }
@@ -37,7 +39,7 @@ export class UserController {
   @Get(':id')
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
     try {
-      return this.userService.findOneById(id);
+      return this.userService.findOne(id);
     } catch (err) {
       console.log(err.message);
       return new BadRequestException(err.message);
