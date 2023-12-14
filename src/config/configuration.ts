@@ -1,3 +1,8 @@
+/**
+ * @description Configuration file for the application
+ * @see https://docs.nestjs.com/techniques/configuration
+ */
+
 export default () => ({
   saltRound: parseInt(process.env.SALT_ROUND),
   local: process.env.LOCAL,
