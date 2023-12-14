@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   SerializeOptions,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -28,9 +29,12 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  fetch() {
+  fetch(@Query('query') query: object) {
     try {
-      return this.userService.findAll();
+      if (!query) {
+        return this.userService.findAll();
+      }
+      return this.userService.find(query);
     } catch (err) {
       return new BadRequestException(err.message);
     }
