@@ -5,9 +5,9 @@ export abstract class BaseServiceAbstract<T>
 {
   constructor(private repository: any) {}
 
-  async findOne(filter: object, populate?: string): Promise<T> {
+  async findOne<IdType>(id: IdType, populateOptions?: string): Promise<T> {
     try {
-      return await this.repository.findOne(filter, populate);
+      return await this.repository.findOne(id, populateOptions);
     } catch (err) {
       throw new Error(err.message);
     }
@@ -21,6 +21,14 @@ export abstract class BaseServiceAbstract<T>
     }
   }
 
+  async findAll(populateOptions?: string): Promise<T[]> {
+    try {
+      return await this.repository.find({}, populateOptions);
+    } catch (err) {
+      throw new Error(err.message);
+    }
+  }
+
   async create(dto: Partial<T>): Promise<T> {
     try {
       return await this.repository.create(dto);
@@ -28,6 +36,7 @@ export abstract class BaseServiceAbstract<T>
       throw new Error(err.message);
     }
   }
+
   async update(id: string, dto: Partial<T>): Promise<T> {
     try {
       return await this.repository.update(id, dto);
@@ -35,23 +44,10 @@ export abstract class BaseServiceAbstract<T>
       throw new Error(err.message);
     }
   }
-  async delete<IdType>(id: IdType): Promise<IdType> {
+
+  async delete<IdType>(id: IdType): Promise<boolean> {
     try {
       return await this.repository.delete(id);
-    } catch (err) {
-      throw new Error(err.message);
-    }
-  }
-  async fetch(): Promise<T[]> {
-    try {
-      return await this.repository.fetch();
-    } catch (err) {
-      throw new Error(err.message);
-    }
-  }
-  async findOneById(id: string): Promise<T> {
-    try {
-      return await this.repository.findOne(id);
     } catch (err) {
       throw new Error(err.message);
     }
