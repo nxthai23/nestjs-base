@@ -8,7 +8,6 @@ import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
 
 interface JwtPayload {
-  username: string;
   sub: string;
 }
 
@@ -26,12 +25,15 @@ export class AuthService {
     username: string,
     password: string,
   ): Promise<LoginResponse> {
-    const user: User = await this.userService.findOne({ username });
+    const user: User = (await this.userService.find({ username }))[0];
+    if (!user) throw new Error('User not found!');
+    /**
+     * Implement others auth strategies here
+     */
     switch (authType.toUpperCase()) {
       case this.configService.get<string>('local'):
         await this.localStrategy.validate(password, user.password);
         const payload: JwtPayload = {
-          username: user.username,
           sub: user._id,
         };
         const accessToken = await this.jwtService.signAsync(payload);
