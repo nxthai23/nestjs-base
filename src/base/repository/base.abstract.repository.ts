@@ -7,11 +7,15 @@ export abstract class BaseRepositoryAbstract<T>
   constructor(private model: Model<T>) {
     this.model = model;
   }
-  async findOne(filter: object, populate?: string): Promise<T | any> {
-    if (typeof populate !== 'undefined') {
-      return await this.model.findOne(filter).populate(populate);
+
+  async findOne<IdType, T>(
+    id: IdType,
+    populateOptions?: string,
+  ): Promise<T | any> {
+    if (!populateOptions) {
+      return await this.model.findOne(id);
     }
-    return await this.model.findOne(filter);
+    return await this.model.findOne(id).populate(populateOptions);
   }
 
   async find(filter: object, populate?: string): Promise<T[]> {
@@ -21,37 +25,19 @@ export abstract class BaseRepositoryAbstract<T>
     return await this.model.find(filter);
   }
 
-  async fetch(populate?: string): Promise<T[]> {
-    if (typeof populate !== 'undefined') {
-      return await this.model.find().populate(populate);
-    }
-    return await this.model.find();
-  }
-  async findOneById(id: string, populate?: string): Promise<T | any> {
-    if (typeof populate !== 'undefined') {
-      return await this.model.findById(id).populate(populate);
-    }
-    return await this.model.findById(id);
-  }
   async create(dto: Partial<T>): Promise<T> {
     return await this.model.create(dto);
   }
+
   async update(id: string, dto: Partial<T>): Promise<T> {
-    return await this.model.findOneAndUpdate(
-      { _id: id, deleted_at: null },
-      dto,
-      { new: true },
-    );
+    return await this.model.findOneAndUpdate({ _id: id }, dto, { new: true });
   }
-  async delete<IdType>(id: IdType): Promise<IdType> {
-    const item = await this.model.findById(id);
-    return item.id;
+
+  async delete<IdType>(id: IdType): Promise<boolean> {
+    const deleteItem = await this.model.findById(id);
+    if (!deleteItem) {
+      return false;
+    }
+    return !!(await this.model.findByIdAndDelete(id));
   }
-  // async softDelete(id: string): Promise<boolean> {
-  //   const deleteItem = await this.model.findById(id);
-  //   if (!deleteItem) return false;
-  //   return !!(await this.model.findByIdAndUpdate<T>(id,
-  //     deleted_at: new Date(),
-  //   ));
-  // }
 }

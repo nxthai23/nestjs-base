@@ -1,3 +1,8 @@
+/**
+ * @description Configuration file for the application
+ * @see https://docs.nestjs.com/techniques/configuration
+ */
+
 export default () => ({
   saltRound: parseInt(process.env.SALT_ROUND),
   local: process.env.LOCAL,
@@ -7,4 +12,5 @@ export default () => ({
   },
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiration: process.env.JWT_EXPIRATION,
+  appPort: parseInt(process.env.APP_PORT),
 });

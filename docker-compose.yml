@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  nestjs:
+    image: node:18-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo/?readPreference=primary&appname=MongoDB%20Compass&directConnection=true&ssl=false
+      MONGO_DB_NAME: localAuth
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - '27017:27017'
+    command:
+      - --storageEngine=wiredTiger
+    volumes:
+      - data:/data/db
+    logging:
+      driver: none
+
+volumes:
+  data:
+  node_modules:
