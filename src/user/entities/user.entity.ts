@@ -1,10 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Exclude } from 'class-transformer';
+import { Types } from 'mongoose';
 export type UserDocument = User & Document;
 
 @Schema()
 export class User {
-  _id: string;
+  _id: Types.ObjectId;
 
   @Prop({ require: true, unique: true })
   username: string;
