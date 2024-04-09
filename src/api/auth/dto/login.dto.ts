@@ -1,4 +1,4 @@
-import { User } from 'src/user/entities/user.entity';
+import { User } from 'src/api/user/entities/user.entity';
 
 export class LoginDto {
   type: string;

@@ -43,6 +43,7 @@ export class UserController {
   async findOne(@Req() req: Request) {
     try {
       const userId = req['userId'];
+      console.log(userId);
       return await this.userService.findOne(userId);
     } catch (err) {
       console.log(err.message);

@@ -9,7 +9,7 @@ import {
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/signIn.dto';
 import { LoginDto } from './dto/login.dto';
-import { UserSerialize } from 'src/user/interceptor/user.interceptor';
+import { UserSerialize } from 'src/api/user/interceptor/user.interceptor';
 
 @Controller('auth')
 export class AuthController {

@@ -6,7 +6,7 @@ import { User, UserSchema } from './entities/user.entity';
 import { UserRepository } from './user.repository';
 import { JwtMiddleware } from 'src/middlewares/jwt.middleware';
 import { JwtService } from '@nestjs/jwt';
-import { JwtStrategy } from 'src/auth/strategies/jwt';
+import { JwtStrategy } from 'src/api/auth/strategies/jwt';
 
 @Module({
   imports: [

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { UserService } from 'src/user/user.service';
-import { User } from 'src/user/entities/user.entity';
+import { UserService } from 'src/api/user/user.service';
+import { User } from 'src/api/user/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { LocalStrategy } from './strategies/local';
 import { JwtService } from '@nestjs/jwt';
-import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import { CreateUserDto } from 'src/api/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
 
 interface JwtPayload {
@@ -34,7 +34,7 @@ export class AuthService {
       case this.configService.get<string>('local'):
         await this.localStrategy.validate(password, user.password);
         const payload: JwtPayload = {
-          sub: user._id,
+          sub: user._id.toString(),
         };
         const accessToken = await this.jwtService.signAsync(payload);
         return { accessToken, user };
