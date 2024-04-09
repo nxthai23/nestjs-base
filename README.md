@@ -10,6 +10,14 @@ $ npm ci
 
 ## Running the app
 
+### Step 1:
+
+Setting up your env in env.example file
+
+### Step 2:
+
+Choose command below and run
+
 ```bash
 # development
 $ npm run start
@@ -21,7 +29,23 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Running the app Docker way
+
+### Requirements:
+
+- Docker
+- Docker compose
+
+Step 1:
+
+Run the command below:
+
+```bash
+$ docker-compose up -d --build
+```
+
 ## Project Structure
+
 Base on Repository Pattern <br>
 Updating...
 
