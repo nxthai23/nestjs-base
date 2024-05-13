@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from 'src/guard/jwt.auth.guard';
+import { JwtAuthGuard } from 'src/common/guard/jwt.auth.guard';
 import { UserSerialize } from './interceptor/user.interceptor';
 
 // @TODO: add admin validation later for this controller

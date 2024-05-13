@@ -2,7 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { NextFunction } from 'express';
 import { JwtStrategy } from 'src/api/auth/strategies/jwt';
-import { ParseObjectIdPipe } from 'src/pipe/objectId.pipe';
+import { ParseObjectIdPipe } from '../pipe/objectId.pipe';
 
 /**
  * Middleware usually to process request before it reaches the controller
