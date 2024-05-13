@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { HttpExceptionFilter } from './common/filter/http-exception';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,6 +18,7 @@ async function bootstrap() {
   //  * if no options => use default options
 
   app.enableCors();
+  app.useGlobalFilters(new HttpExceptionFilter());
   //using global pipe - global validation
   const appPort = app.get(ConfigService).get('appPort');
   await app.listen(appPort);
