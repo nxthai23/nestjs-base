@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filter/http-exception';
+import { getMemoryUsage } from './libs/hardware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,6 +23,9 @@ async function bootstrap() {
   //using global pipe - global validation
   const appPort = app.get(ConfigService).get('appPort');
   await app.listen(appPort);
+  const memoryUsage = getMemoryUsage();
+  Logger.log('Bootstrap memory usage: \n', 'Bootstrap');
+  Logger.log(memoryUsage, 'Bootstrap');
   Logger.log(`Server running on http://localhost:${appPort}`, 'Bootstrap');
 }
 
