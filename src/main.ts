@@ -50,5 +50,8 @@ export const handler: Handler = async (
   callback: Callback,
 ) => {
   server = server ?? (await bootstrapServerless());
+  const memoryUsage = getMemoryUsage();
+  Logger.log('Bootstrap memory usage: \n', 'Bootstrap');
+  Logger.log(memoryUsage, 'Bootstrap');
   return server(event, context, callback);
 };
