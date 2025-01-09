@@ -16,6 +16,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/common/guard/jwt.auth.guard';
 import { UserSerialize } from './interceptor/user.interceptor';
 import { HttpExceptionFilter } from 'src/common/filter/http-exception';
+import { Connection } from 'mongoose';
 
 // @TODO: add admin validation later for this controller
 
@@ -30,7 +31,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  fetch(@Query('query') query?: object) {
+  async fetch(@Query('query') query?: object) {
     try {
       if (!query) {
         return this.userService.findAll();

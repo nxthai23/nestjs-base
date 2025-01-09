@@ -1,11 +1,17 @@
+import { ClientSession } from 'mongoose';
+
 export interface BaseRepositoryInterface<T> {
-  findOne<IdType, T>(id: IdType, populateOptions?: string): Promise<T | any>;
+  findOne<IdType, T>(id: IdType, populateOptions?: any): Promise<T | any>;
 
-  find(filterOptions: object, populateOptions?: string): Promise<T[] | any[]>;
+  find(filterOptions: object, populateOptions?: any): Promise<T[] | any[]>;
 
-  create(dto: Partial<T>): Promise<Partial<T>>;
+  create(dto: Partial<T>, session?: ClientSession): Promise<Partial<T>>;
 
-  update(id: string, dto: Partial<T>): Promise<Partial<T>>;
+  update(
+    id: string,
+    dto: Partial<T>,
+    session?: ClientSession,
+  ): Promise<Partial<T>>;
 
-  delete<IdType>(id: IdType): Promise<boolean>;
+  delete<IdType>(id: IdType, session?: ClientSession): Promise<boolean>;
 }
