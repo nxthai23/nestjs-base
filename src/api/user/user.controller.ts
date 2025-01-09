@@ -4,17 +4,18 @@ import {
   Body,
   Patch,
   Delete,
-  BadRequestException,
   UseGuards,
   UseInterceptors,
   SerializeOptions,
   Query,
   Req,
+  UseFilters,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/common/guard/jwt.auth.guard';
 import { UserSerialize } from './interceptor/user.interceptor';
+import { HttpExceptionFilter } from 'src/common/filter/http-exception';
 
 // @TODO: add admin validation later for this controller
 
@@ -24,6 +25,7 @@ import { UserSerialize } from './interceptor/user.interceptor';
   excludePrefixes: ['password'],
 })
 @UseInterceptors(UserSerialize)
+@UseFilters(HttpExceptionFilter)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -35,7 +37,7 @@ export class UserController {
       }
       return this.userService.find(query);
     } catch (err) {
-      return new BadRequestException(err.message);
+      throw err;
     }
   }
 
@@ -43,11 +45,9 @@ export class UserController {
   async findOne(@Req() req: Request) {
     try {
       const userId = req['userId'];
-      console.log(userId);
       return await this.userService.findOne(userId);
     } catch (err) {
-      console.log(err.message);
-      return new BadRequestException(err.message);
+      throw err;
     }
   }
 
@@ -57,7 +57,7 @@ export class UserController {
       const userId = req['userId'];
       return this.userService.update(userId, updateUserDto);
     } catch (err) {
-      return new BadRequestException(err.message);
+      throw err;
     }
   }
 
@@ -67,7 +67,7 @@ export class UserController {
       const userId = req['userId'];
       return this.userService.delete(userId);
     } catch (err) {
-      return new BadRequestException(err.message);
+      throw err;
     }
   }
 }

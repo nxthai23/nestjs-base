@@ -5,13 +5,16 @@ import {
   BadRequestException,
   SerializeOptions,
   UseInterceptors,
+  UseFilters,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/signIn.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserSerialize } from 'src/api/user/interceptor/user.interceptor';
+import { HttpExceptionFilter } from 'src/common/filter/http-exception';
 
 @Controller('auth')
+@UseFilters(HttpExceptionFilter)
 export class AuthController {
   constructor(private authService: AuthService) {}
 
@@ -26,7 +29,7 @@ export class AuthController {
       const result = await this.authService.login(type, username, password);
       return result;
     } catch (err) {
-      return new BadRequestException(err.message);
+      throw err;
     }
   }
 
@@ -37,7 +40,7 @@ export class AuthController {
       const result = await this.authService.signIn(type, user);
       return result;
     } catch (err) {
-      return new BadRequestException(err.message);
+      throw err;
     }
   }
 }
