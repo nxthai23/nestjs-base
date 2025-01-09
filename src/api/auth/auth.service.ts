@@ -6,6 +6,7 @@ import { LocalStrategy } from './strategies/local';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from 'src/api/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
+import { NotFound } from 'src/common/filter/http-error-response';
 
 interface JwtPayload {
   sub: string;
@@ -26,7 +27,7 @@ export class AuthService {
     password: string,
   ): Promise<LoginResponse> {
     const user: User = (await this.userService.find({ username }))[0];
-    if (!user) throw new Error('User not found!');
+    if (!user) throw NotFound(null, 'User not found!');
     /**
      * Implement others auth strategies here
      */
