@@ -13,10 +13,9 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from 'src/common/guard/jwt.auth.guard';
+import { JwtAuthGuard } from 'src/core/guard/jwt.auth.guard';
 import { UserSerialize } from './interceptor/user.interceptor';
-import { HttpExceptionFilter } from 'src/common/filter/http-exception';
-import { Connection } from 'mongoose';
+import { HttpExceptionFilter } from 'src/core/filter/http-exception';
 
 // @TODO: add admin validation later for this controller
 
@@ -31,12 +30,9 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  async fetch(@Query('query') query?: object) {
+  async fetch() {
     try {
-      if (!query) {
-        return this.userService.findAll();
-      }
-      return this.userService.find(query);
+      return this.userService.findAll();
     } catch (err) {
       throw err;
     }
@@ -46,7 +42,7 @@ export class UserController {
   async findOne(@Req() req: Request) {
     try {
       const userId = req['userId'];
-      return await this.userService.findOne(userId);
+      return await this.userService.findById(userId);
     } catch (err) {
       throw err;
     }

@@ -6,11 +6,12 @@ import {
 } from '@nestjs/common';
 import { UserModule } from './api/user/user.module';
 import { AuthModule } from './api/auth/auth.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule } from '@nestjs/config';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import configuration from './config/configuration';
 import { APP_PIPE } from '@nestjs/core';
-import { LoggerMiddleware } from './common/middlewares/logger.middleware';
+import { LoggerMiddleware } from './core/middlewares/logger.middleware';
+import { DatabaseConfig } from './core/database/database';
 
 @Module({
   imports: [
@@ -20,13 +21,8 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
       isGlobal: true,
       load: [configuration],
     }),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URI'),
-        dbName: configService.get<string>('MONGO_DB_NAME'),
-      }),
-      inject: [ConfigService],
+    MikroOrmModule.forRootAsync({
+      useClass: DatabaseConfig,
     }),
   ],
   providers: [

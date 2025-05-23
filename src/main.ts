@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
-import { HttpExceptionFilter } from './common/filter/http-exception';
+import { HttpExceptionFilter } from './core/filter/http-exception';
 import { getMemoryUsage } from './libs/hardware';
 
 async function bootstrap() {
