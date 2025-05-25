@@ -7,16 +7,20 @@ import { LoadStrategy } from '@mikro-orm/core';
 import { MongoDriver } from '@mikro-orm/mongodb';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { join } from 'path';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class DatabaseConfig implements MikroOrmOptionsFactory {
+  constructor(private configService: ConfigService) {}
+
   createMikroOrmOptions(): MikroOrmModuleOptions {
-    const dbType = process.env.DB_TYPE || 'mongodb';
+    const dbType = this.configService.getOrThrow<string>('dbType');
+    const nodeEnv = this.configService.getOrThrow<string>('NODE_ENV');
 
     const baseOptions = {
       cache: { enabled: false },
       loadStrategy: LoadStrategy.JOINED,
-      debug: process.env.NODE_ENV !== 'production',
+      debug: nodeEnv !== 'production',
       entities: ['dist/api/**/*.entity.js'],
       entitiesTs: ['src/api/**/*.entity.ts'],
       migrations: {
@@ -29,18 +33,22 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
       return {
         ...baseOptions,
         driver: MongoDriver,
-        clientUrl: process.env.MONGO_URI || 'mongodb://localhost:27017',
-        dbName: process.env.MONGO_DB_NAME || 'nestjs-base',
+        clientUrl:
+          this.configService.get<string>('mongoUri') ||
+          'mongodb://localhost:27017',
+        dbName: this.configService.get<string>('mongoDbName') || 'nestjs-base',
       };
     } else {
       return {
         ...baseOptions,
         driver: PostgreSqlDriver,
-        host: process.env.POSTGRES_HOST || 'localhost',
-        port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
-        user: process.env.POSTGRES_USER || 'postgres',
-        password: process.env.POSTGRES_PASSWORD || 'postgres',
-        dbName: process.env.POSTGRES_DB_NAME || 'nestjs-base',
+        host: this.configService.get<string>('postgresHost') || 'localhost',
+        port: this.configService.get<number>('postgresPort') || 5432,
+        user: this.configService.get<string>('postgresUser') || 'postgres',
+        password:
+          this.configService.get<string>('postgresPassword') || 'postgres',
+        dbName:
+          this.configService.get<string>('postgresDbName') || 'nestjs-base',
       };
     }
   }
