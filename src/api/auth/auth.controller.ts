@@ -11,7 +11,7 @@ import { AuthService } from './auth.service';
 import { SignInDto } from './dto/signIn.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserSerialize } from 'src/api/user/interceptor/user.interceptor';
-import { HttpExceptionFilter } from 'src/common/filter/http-exception';
+import { HttpExceptionFilter } from 'src/core/filter/http-exception';
 
 @Controller('auth')
 @UseFilters(HttpExceptionFilter)

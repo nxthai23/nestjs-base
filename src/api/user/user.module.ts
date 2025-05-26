@@ -1,27 +1,16 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './entities/user.entity';
-import { UserRepository } from './user.repository';
-import { JwtMiddleware } from 'src/common/middlewares/jwt.middleware';
+import { User } from './entities/user.entity';
+import { JwtMiddleware } from 'src/core/middlewares/jwt.middleware';
 import { JwtService } from '@nestjs/jwt';
 import { JwtStrategy } from 'src/api/auth/strategies/jwt';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-  ],
+  imports: [MikroOrmModule.forFeature([User])],
   controllers: [UserController],
-  providers: [
-    UserService,
-    {
-      provide: 'UserRepository',
-      useClass: UserRepository,
-    },
-    JwtService,
-    JwtStrategy,
-  ],
+  providers: [UserService, JwtService, JwtStrategy],
   exports: [UserService],
 })
 export class UserModule implements NestModule {

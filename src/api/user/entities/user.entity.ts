@@ -1,24 +1,22 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Entity, Property, PrimaryKey } from '@mikro-orm/core';
+import { ObjectId } from '@mikro-orm/mongodb';
+import { BaseEntity } from '../../../core/base/base.entity';
 import { Exclude } from 'class-transformer';
-import { Types } from 'mongoose';
-export type UserDocument = User & Document;
 
-@Schema()
-export class User {
-  _id: Types.ObjectId;
+@Entity()
+export class User extends BaseEntity {
+  @PrimaryKey()
+  _id!: ObjectId;
 
-  @Prop({ require: true, unique: true })
-  username: string;
+  @Property()
+  username!: string;
 
-  @Prop()
+  @Property()
   @Exclude()
-  password: string;
-
-  // add other properties here!
+  password!: string;
 
   constructor(partial: Partial<User>) {
+    super();
     Object.assign(this, partial);
   }
 }
-
-export const UserSchema = SchemaFactory.createForClass(User);
