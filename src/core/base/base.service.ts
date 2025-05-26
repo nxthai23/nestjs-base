@@ -3,7 +3,7 @@ import { EntityRepository, FilterQuery, wrap } from '@mikro-orm/core';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BaseEntity } from '../database/entities/base.entity';
+import { BaseEntity } from './base.entity';
 import { IBaseService } from './base.service.interface';
 
 /**
