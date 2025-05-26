@@ -22,6 +22,17 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   //using global pipe - global validation
   const appPort = app.get(ConfigService).get('appPort');
+
+  // setup swagger
+  const swaggerConfig = {
+    title: 'NestJS Boilerplate',
+    description: 'NestJS Boilerplate API Documentation',
+    version: '1.0',
+    tag: 'NestJS Boilerplate',
+  };
+  const { Swagger } = await import('./core/docs/swagger');
+  const swagger = new Swagger();
+  swagger.setupSwagger(app, swaggerConfig);
   await app.listen(appPort);
   const memoryUsage = getMemoryUsage();
   Logger.log('Bootstrap memory usage: \n', 'Bootstrap');
