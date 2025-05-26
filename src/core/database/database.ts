@@ -29,27 +29,42 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
       },
     };
 
-    if (dbType === 'mongodb') {
-      return {
-        ...baseOptions,
-        driver: MongoDriver,
-        clientUrl:
-          this.configService.get<string>('mongoUri') ||
-          'mongodb://localhost:27017',
-        dbName: this.configService.get<string>('mongoDbName') || 'nestjs-base',
-      };
-    } else {
-      return {
-        ...baseOptions,
-        driver: PostgreSqlDriver,
-        host: this.configService.get<string>('postgresHost') || 'localhost',
-        port: this.configService.get<number>('postgresPort') || 5432,
-        user: this.configService.get<string>('postgresUser') || 'postgres',
-        password:
-          this.configService.get<string>('postgresPassword') || 'postgres',
-        dbName:
-          this.configService.get<string>('postgresDbName') || 'nestjs-base',
-      };
+    switch (dbType) {
+      case 'mongodb':
+        return {
+          ...baseOptions,
+          driver: MongoDriver,
+          clientUrl:
+            this.configService.get<string>('database.mongoUri') ||
+            'mongodb://localhost:27017',
+          dbName:
+            this.configService.get<string>('database.mongoDbName') ||
+            'nestjs-base',
+        };
+      case 'postgresql': {
+        return {
+          ...baseOptions,
+          driver: PostgreSqlDriver,
+          host:
+            this.configService.get<string>('database.postgresHost') ||
+            'localhost',
+          port: this.configService.get<number>('database.postgresPort') || 5432,
+          user:
+            this.configService.get<string>('database.postgresUser') ||
+            'postgres',
+          password:
+            this.configService.get<string>('database.postgresPassword') ||
+            'postgres',
+          dbName:
+            this.configService.get<string>('database.postgresDbName') ||
+            'nestjs-base',
+        };
+      }
+      default: {
+        throw new Error(
+          `Unsupported database type: ${dbType}. Supported types are 'mongodb' and 'postgresql'.`,
+        );
+      }
     }
   }
 }
