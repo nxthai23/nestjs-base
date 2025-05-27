@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserService } from 'src/api/user/user.service';
 import { User } from 'src/api/user/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
@@ -6,7 +6,6 @@ import { LocalStrategy } from './strategies/local';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from 'src/api/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
-import { NotFound } from 'src/core/filter/http-error-response';
 
 interface JwtPayload {
   sub: string;
@@ -27,7 +26,7 @@ export class AuthService {
     password: string,
   ): Promise<LoginResponse> {
     const user: User = await this.userService.findByUsername(username);
-    if (!user) throw NotFound(null, 'User not found!');
+    if (!user) throw new NotFoundException('User not found!');
     /**
      * Implement others auth strategies here
      */

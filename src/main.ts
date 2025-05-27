@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
-import { HttpExceptionFilter } from './core/filter/http-exception';
+import { HttpExceptionFilter } from './core/filter/http-exception.filter';
 import { getMemoryUsage } from './libs/hardware';
 
 async function bootstrap() {
@@ -21,7 +21,6 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalFilters(new HttpExceptionFilter());
   //using global pipe - global validation
-  const appPort = app.get(ConfigService).get('appPort');
 
   // setup swagger
   const swaggerConfig = {
@@ -33,7 +32,11 @@ async function bootstrap() {
   const { Swagger } = await import('./core/docs/swagger');
   const swagger = new Swagger();
   swagger.setupSwagger(app, swaggerConfig);
+
+  const appPort = app.get(ConfigService).get('appPort');
   await app.listen(appPort);
+
+  // Log memory usage
   const memoryUsage = getMemoryUsage();
   Logger.log('Bootstrap memory usage: \n', 'Bootstrap');
   Logger.log(memoryUsage, 'Bootstrap');
