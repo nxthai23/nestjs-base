@@ -6,10 +6,7 @@ import { LocalStrategy } from './strategies/local';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from 'src/api/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
-
-interface JwtPayload {
-  sub: string;
-}
+import { JwtPayload } from './auth.type';
 
 @Injectable()
 export class AuthService {
