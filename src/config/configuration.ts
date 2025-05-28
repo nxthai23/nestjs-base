@@ -24,4 +24,8 @@ export default () => ({
   appPort: parseInt(process.env.APP_PORT),
   dbType: process.env.DB_TYPE,
   nodeEnv: process.env.NODE_ENV,
+  redis: {
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    ttl: parseInt(process.env.REDIS_TTL) || 60 * 1000, // Default 1 minute in ms
+  },
 });
