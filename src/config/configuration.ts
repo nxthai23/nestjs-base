@@ -27,5 +27,6 @@ export default () => ({
   redis: {
     url: process.env.REDIS_URL,
     ttl: parseInt(process.env.REDIS_TTL) || 60 * 1000, // Default 1 minute in ms
+    type: process.env.REDIS_TYPE || 'single', // 'single' or 'cluster'
   },
 });

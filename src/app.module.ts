@@ -15,6 +15,7 @@ import { LoggerMiddleware } from './core/middlewares/logger.middleware';
 import { DatabaseConfig } from './core/database/database';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
+// import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
@@ -56,6 +57,14 @@ import { redisStore } from 'cache-manager-redis-store';
         }
       },
     }),
+    // import redis module here for some case that cache module don't work
+    // RedisModule.forRootAsync({
+    //   imports: [ConfigModule],
+    //   useFactory: () => ({
+    //     type: 'single',
+    //     url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    //   }),
+    // }),
   ],
   providers: [
     {
