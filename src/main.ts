@@ -1,11 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { HttpExceptionFilter } from './core/filter/http-exception.filter';
 import { getMemoryUsage } from './libs/hardware';
+import { ConfigService } from '@nestjs/config';
+
+import * as dotenv from 'dotenv';
 
 async function bootstrap() {
+  // Reload environment variables
+  dotenv.config({ override: true });
   const app = await NestFactory.create(AppModule);
   /**
    * define cors options then pass to options to function enableCors.
@@ -22,6 +26,10 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   //using global pipe - global validation
 
+  // get config
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('appPort') || 3000; // Default to 3000 if PORT isn't set
+
   // setup swagger
   const swaggerConfig = {
     title: 'NestJS Boilerplate',
@@ -33,14 +41,13 @@ async function bootstrap() {
   const swagger = new Swagger();
   swagger.setupSwagger(app, swaggerConfig);
 
-  const appPort = app.get(ConfigService).get('appPort');
-  await app.listen(appPort);
+  await app.listen(port);
 
   // Log memory usage
   const memoryUsage = getMemoryUsage();
   Logger.log('Bootstrap memory usage: \n', 'Bootstrap');
   Logger.log(memoryUsage, 'Bootstrap');
-  Logger.log(`Server running on http://localhost:${appPort}`, 'Bootstrap');
+  Logger.log(`Server running on http://localhost:${port}`, 'Bootstrap');
 }
 
 bootstrap();

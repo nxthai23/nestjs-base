@@ -1,4 +1,5 @@
 import {
+  Logger,
   MiddlewareConsumer,
   Module,
   NestModule,
@@ -21,6 +22,7 @@ import { redisStore } from 'cache-manager-redis-store';
     AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,
+      cache: false,
       load: [configuration],
     }),
     MikroOrmModule.forRootAsync({
@@ -31,17 +33,27 @@ import { redisStore } from 'cache-manager-redis-store';
       inject: [ConfigService],
       isGlobal: true,
       useFactory: async (configService: ConfigService) => {
-        return {
-          store: await redisStore({
-            url: configService.getOrThrow<string>('redis.url'),
-            ttl: configService.get('redis.ttl', 60 * 1000), // Default 1 minute in ms
-            password: configService.get('redis.password', undefined),
-            // @TODO: add retry strategy later
-            retryStrategy: () => {
-              return;
-            },
-          }),
-        };
+        const logger = new Logger('CacheModule');
+        const redisUrl = configService.get<string>('redis.url');
+        if (!redisUrl) {
+          logger.log(
+            'Redis URL is not configured. Using memory cache instead.',
+          );
+          return {};
+        } else {
+          logger.log('Redis URL is configured. Using Redis.');
+          return {
+            store: await redisStore({
+              url: configService.getOrThrow<string>('redis.url'),
+              ttl: configService.get('redis.ttl', 60 * 1000), // Default 1 minute in ms
+              password: configService.get('redis.password', undefined),
+              // @TODO: add retry strategy later
+              retryStrategy: () => {
+                return;
+              },
+            }),
+          };
+        }
       },
     }),
   ],
