@@ -51,12 +51,7 @@ export class SiweService {
       }
 
       // Verify signature
-      const publicClient = createPublicClient({
-        chain: !!process.env.LOCAL_DEV ? abstractTestnet : abstract,
-        transport: http(),
-      });
-
-      const isValidSignature = await publicClient.verifySiweMessage({
+      const isValidSignature = this.publicClient.verifySiweMessage({
         message: message,
         signature: signature as `0x${string}`,
         nonce,
