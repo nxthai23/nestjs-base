@@ -20,7 +20,11 @@ export class DecimalHelper {
    * @param values - Additional values to add
    * @returns The sum as a Decimal
    */
-  static add(a: string | number | Decimal, b: string | number | Decimal, ...values: Array<string | number | Decimal>): Decimal {
+  static add(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+    ...values: Array<string | number | Decimal>
+  ): Decimal {
     let result = new Decimal(a).plus(b);
     for (const value of values) {
       result = result.plus(value);
@@ -35,7 +39,11 @@ export class DecimalHelper {
    * @param values - Additional values to subtract
    * @returns The difference as a Decimal
    */
-  static subtract(a: string | number | Decimal, b: string | number | Decimal, ...values: Array<string | number | Decimal>): Decimal {
+  static subtract(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+    ...values: Array<string | number | Decimal>
+  ): Decimal {
     let result = new Decimal(a).minus(b);
     for (const value of values) {
       result = result.minus(value);
@@ -50,7 +58,11 @@ export class DecimalHelper {
    * @param values - Additional values to multiply
    * @returns The product as a Decimal
    */
-  static multiply(a: string | number | Decimal, b: string | number | Decimal, ...values: Array<string | number | Decimal>): Decimal {
+  static multiply(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+    ...values: Array<string | number | Decimal>
+  ): Decimal {
     let result = new Decimal(a).times(b);
     for (const value of values) {
       result = result.times(value);
@@ -65,7 +77,11 @@ export class DecimalHelper {
    * @param values - Additional divisors
    * @returns The quotient as a Decimal
    */
-  static divide(a: string | number | Decimal, b: string | number | Decimal, ...values: Array<string | number | Decimal>): Decimal {
+  static divide(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+    ...values: Array<string | number | Decimal>
+  ): Decimal {
     let result = new Decimal(a).div(b);
     for (const value of values) {
       result = result.div(value);
@@ -79,7 +95,10 @@ export class DecimalHelper {
    * @param b - Second value
    * @returns -1 if a < b, 0 if a = b, 1 if a > b
    */
-  static compare(a: string | number | Decimal, b: string | number | Decimal): number {
+  static compare(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+  ): number {
     return new Decimal(a).comparedTo(b);
   }
 
@@ -89,7 +108,10 @@ export class DecimalHelper {
    * @param b - Second value
    * @returns true if values are equal, false otherwise
    */
-  static equals(a: string | number | Decimal, b: string | number | Decimal): boolean {
+  static equals(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+  ): boolean {
     return new Decimal(a).equals(b);
   }
 
@@ -99,7 +121,10 @@ export class DecimalHelper {
    * @param b - Second value
    * @returns true if a > b, false otherwise
    */
-  static greaterThan(a: string | number | Decimal, b: string | number | Decimal): boolean {
+  static greaterThan(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+  ): boolean {
     return new Decimal(a).greaterThan(b);
   }
 
@@ -109,7 +134,10 @@ export class DecimalHelper {
    * @param b - Second value
    * @returns true if a < b, false otherwise
    */
-  static lessThan(a: string | number | Decimal, b: string | number | Decimal): boolean {
+  static lessThan(
+    a: string | number | Decimal,
+    b: string | number | Decimal,
+  ): boolean {
     return new Decimal(a).lessThan(b);
   }
 
@@ -120,7 +148,11 @@ export class DecimalHelper {
    * @param roundingMode - Rounding mode (default: Decimal.ROUND_HALF_UP)
    * @returns The rounded Decimal
    */
-  static round(value: string | number | Decimal, decimalPlaces = 0, roundingMode = Decimal.ROUND_HALF_UP): Decimal {
+  static round(
+    value: string | number | Decimal,
+    decimalPlaces = 0,
+    roundingMode = Decimal.ROUND_HALF_UP,
+  ): Decimal {
     return new Decimal(value).toDecimalPlaces(decimalPlaces, roundingMode);
   }
 
@@ -131,7 +163,11 @@ export class DecimalHelper {
    * @param roundingMode - Rounding mode
    * @returns Formatted string representation
    */
-  static format(value: string | number | Decimal, decimalPlaces?: number, roundingMode = Decimal.ROUND_HALF_UP): string {
+  static format(
+    value: string | number | Decimal,
+    decimalPlaces?: number,
+    roundingMode = Decimal.ROUND_HALF_UP,
+  ): string {
     const decimal = new Decimal(value);
     if (decimalPlaces !== undefined) {
       return decimal.toDecimalPlaces(decimalPlaces, roundingMode).toString();

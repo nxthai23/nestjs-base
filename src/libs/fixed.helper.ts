@@ -14,7 +14,7 @@ export class FixedHelper {
     if (typeof value === 'number') {
       value = value.toString();
     }
-    return FixedNumber.fromString(value, {decimals});
+    return FixedNumber.fromString(value, { decimals });
   }
 
   /**
@@ -28,7 +28,7 @@ export class FixedHelper {
   }
 
   /**
-   * Parses a value to a bigint representation 
+   * Parses a value to a bigint representation
    * @param value - The value to parse
    * @param decimals - Number of decimals (default: 18)
    * @returns The parsed bigint
@@ -38,26 +38,26 @@ export class FixedHelper {
     const parts = value.split('.');
     let whole = parts[0] || '0';
     let fraction = parts[1] || '';
-    
+
     // Remove negative sign for processing
     const isNegative = whole.startsWith('-');
     if (isNegative) {
       whole = whole.substring(1);
     }
-    
+
     // Pad or truncate fraction as needed
     if (fraction.length > decimals) {
       fraction = fraction.substring(0, decimals);
     } else {
       fraction = fraction.padEnd(decimals, '0');
     }
-    
+
     // Combine and convert to bigint
     let result = BigInt(whole + fraction);
     if (isNegative) {
       result = -result;
     }
-    
+
     return result;
   }
 
@@ -71,24 +71,23 @@ export class FixedHelper {
     // Manual implementation of formatFixed since ethers v6 API has changed
     const negative = value < 0n;
     const absValue = negative ? -value : value;
-    
+
     let stringValue = absValue.toString();
-    
+
     // Pad with leading zeros if needed
     if (stringValue.length <= decimals) {
       stringValue = stringValue.padStart(decimals + 1, '0');
     }
-    
+
     // Insert decimal point
-    const wholePart = stringValue.slice(0, stringValue.length - decimals) || '0';
+    const wholePart =
+      stringValue.slice(0, stringValue.length - decimals) || '0';
     const fractionalPart = stringValue.slice(stringValue.length - decimals);
-    
+
     // Trim trailing zeros
-    let trimmed = fractionalPart.replace(/0+$/, '');
-    const result = trimmed.length > 0 ? 
-      `${wholePart}.${trimmed}` : 
-      wholePart;
-    
+    const trimmed = fractionalPart.replace(/0+$/, '');
+    const result = trimmed.length > 0 ? `${wholePart}.${trimmed}` : wholePart;
+
     return negative ? '-' + result : result;
   }
 
@@ -213,14 +212,14 @@ export class FixedHelper {
   static round(value: FixedNumber, decimals: number): string {
     const valueStr = value.toString();
     const parts = valueStr.split('.');
-    
+
     if (parts.length === 1 || parts[1].length <= decimals) {
       return valueStr;
     }
-    
+
     const intPart = parts[0];
     let fracPart = parts[1].slice(0, decimals);
-    
+
     // Simple rounding logic
     if (parts[1].length > decimals) {
       const nextDigit = parseInt(parts[1][decimals], 10);
@@ -235,7 +234,7 @@ export class FixedHelper {
         }
       }
     }
-    
+
     return fracPart.length > 0 ? `${intPart}.${fracPart}` : intPart;
   }
 }
