@@ -1,0 +1,75 @@
+name: Deploy workflows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-to-ec2:
+    name: Deploy Application to EC2
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+
+    steps:
+      - name: Checkout code
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Create SSH key file
+          echo "$EC2_PRIVATE_KEY" > private_key.pem
+          chmod 400 private_key.pem
+
+          # SSH to EC2 instance and deploy
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << EOF
+            APP_DIR="/home/ubuntu/app/nestjs-base"
+            ENV_FILE="/home/ubuntu/app/.env"
+            PARENT_DIR="/home/ubuntu/app"
+
+            # Ensure parent folder exists and has correct ownership
+            sudo mkdir -p \$PARENT_DIR
+            sudo chown -R $EC2_USER:$EC2_USER \$PARENT_DIR
+
+            # Clone or update repository
+            if [ -d "\$APP_DIR/.git" ]; then
+              echo "Repository exists, pulling latest changes..."
+              cd \$APP_DIR
+              git fetch --all
+              git checkout ${{ github.ref_name }}
+              git pull origin ${{ github.ref_name }}
+            else
+              echo "Cloning repository..."
+              rm -rf \$APP_DIR   # clean only this repo folder
+              git clone https://$GH_TOKEN@github.com/${{ github.repository }}.git \$APP_DIR
+              cd \$APP_DIR
+              git checkout ${{ github.ref_name }}
+            fi
+
+            # Restore .env if it exists
+            if [ -f "\$ENV_FILE" ]; then
+              cp "\$ENV_FILE" "\$APP_DIR/.env"
+            else
+              echo "⚠️  Warning: \$ENV_FILE not found"
+            fi
+
+            # Deploy with Docker
+            cd \$APP_DIR
+            docker-compose down --remove-orphans
+            docker-system prune -f
+            docker-compose build --no-cache
+            docker-compose up -d
+          EOF
+
+          # Clean up
+          rm -f private_key.pem
+
+      - name: Deployment Status
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Application should be running on EC2 instance: ${{ secrets.EC2_HOST }}"
