@@ -1,4 +1,4 @@
-name: github actions
+name: Build workflow
 
 on:
   push:
@@ -36,20 +36,13 @@ jobs:
         # script could steal NODE_AUTH_TOKEN.
         run: pnpm i --frozen-lock --ignore-scripts
 
-      - name: Build
-        run: pnpm build
+      - name: Lint
+        run: pnpm lint
+        continue-on-error: false
 
       - name: Test
         run: pnpm test
-        # change continue-on-error to false when test is ready
-        continue-on-error: true
+        continue-on-error: false
 
-      - name: Lint
-        run: pnpm lint
-        continue-on-error: true
-
-      # - name: Deploy
-      #   uses: peaceiris/actions-gh-pages@v3
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_dir: ./dist
+      - name: Build
+        run: pnpm build
