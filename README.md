@@ -49,6 +49,36 @@ $ docker-compose up -d --build
 Base on Repository Pattern <br>
 Updating...
 
+## Terraform Guide
+
+1. Go to terraform folder with your envs, run
+
+```bash
+terraform init
+```
+
+2. Run terraform plan to check create infra is right
+
+```bash
+terraform plan -var-file="{{env}}.tfvars"
+```
+
+3. Run validate and format
+
+```bash
+terraform validate
+```
+
+```bash
+terraform fmt
+```
+
+4. Create infra via Terraform
+
+```bash
+terraform apply -var-file="{{env}}.tfvars"
+```
+
 ## Some guide
 
 To use exception filter:

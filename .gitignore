@@ -36,3 +36,13 @@ lerna-debug.log*
 
 # Environment
 .env*
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+.terraformrc
+terraform.rc
+.terraform.tfstate.lock.info
