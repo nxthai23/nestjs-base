@@ -1,4 +1,9 @@
-import { Entity, Property, PrimaryKey } from '@mikro-orm/core';
+import {
+  Entity,
+  Property,
+  PrimaryKey,
+  SerializedPrimaryKey,
+} from '@mikro-orm/core';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { BaseEntity } from '../../../core/base/base.entity';
 import { Exclude } from 'class-transformer';
@@ -9,6 +14,9 @@ import { Exclude } from 'class-transformer';
 export class User extends BaseEntity {
   @PrimaryKey()
   _id!: ObjectId;
+
+  @SerializedPrimaryKey()
+  id!: string;
 
   @Property()
   username!: string;

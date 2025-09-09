@@ -1,4 +1,4 @@
-import { DecimalHelper } from '../decimal.helper';
+import { DecimalHelper } from '../decimal.util';
 import { Decimal } from 'decimal.js';
 
 describe('DecimalHelper', () => {

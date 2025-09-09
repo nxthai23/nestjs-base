@@ -1,4 +1,4 @@
-import { FixedHelper } from '../fixed.helper';
+import { FixedHelper } from '../fixed.util';
 import { FixedNumber } from 'ethers';
 
 describe('FixedHelper', () => {

@@ -29,4 +29,5 @@ export default () => ({
     ttl: parseInt(process.env.REDIS_TTL) || 60 * 1000, // Default 1 minute in ms
     type: process.env.REDIS_TYPE || 'single', // 'single' or 'cluster'
   },
+  isEnableSeeder: parseInt(process.env.ENABLE_SEEDER) || 0,
 });

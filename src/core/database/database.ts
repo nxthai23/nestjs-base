@@ -8,6 +8,7 @@ import { MongoDriver } from '@mikro-orm/mongodb';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
+import { SeedManager } from '@mikro-orm/seeder';
 
 @Injectable()
 export class DatabaseConfig implements MikroOrmOptionsFactory {
@@ -21,12 +22,34 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
       cache: { enabled: false },
       loadStrategy: LoadStrategy.JOINED,
       debug: nodeEnv !== 'production',
-      entities: ['dist/api/**/*.entity.js'],
-      entitiesTs: ['src/api/**/*.entity.ts'],
+      entities: ['dist/api/**/entities/*.entity.js'],
+      entitiesTs: ['src/api/**/entities/*.entity.ts'],
+      // Enable automatic loading of entities on dev, remove on production
+      autoloadEntities: true,
       migrations: {
         path: join(process.cwd(), 'dist', 'migrations'),
         pathTs: join(process.cwd(), 'src', 'migrations'),
       },
+      seeder: {
+        path: join(
+          process.cwd(),
+          'dist',
+          'core',
+          'database',
+          'seeder',
+          'scripts',
+        ),
+        pathTs: join(
+          process.cwd(),
+          'src',
+          'core',
+          'database',
+          'seeder',
+          'scripts',
+        ),
+        defaultSeeder: 'DatabaseSeeder',
+      },
+      extensions: [SeedManager],
     };
 
     switch (dbType) {
@@ -40,6 +63,7 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
           dbName:
             this.configService.get<string>('database.mongoDbName') ||
             'nestjs-base',
+          ensureIndexes: true,
         };
       case 'postgresql': {
         return {

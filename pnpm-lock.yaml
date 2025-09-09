@@ -20,6 +20,9 @@ importers:
       '@mikro-orm/postgresql':
         specifier: ^6.4.15
         version: 6.4.15(@mikro-orm/core@6.4.15)
+      '@mikro-orm/seeder':
+        specifier: ^6.4.15
+        version: 6.4.15(@mikro-orm/core@6.4.15)
       '@nestjs-modules/ioredis':
         specifier: ^2.0.2
         version: 2.0.2(@mikro-orm/core@6.4.15)(@mikro-orm/nestjs@6.1.1(@mikro-orm/core@6.4.15)(@nestjs/common@11.1.2(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.2))(@nestjs/common@11.1.2(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.2)(@nestjs/mongoose@11.0.3(@nestjs/common@11.1.2(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.2)(mongoose@7.8.7)(rxjs@7.8.2))(ioredis@5.6.1)(mongoose@7.8.7)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -703,6 +706,12 @@ packages:
 
   '@mikro-orm/postgresql@6.4.15':
     resolution: {integrity: sha512-3h/78szM4jTZF2XGIsTumuHQI7KAR6/ZQK2MQ/qvbgOPHDJPXY1pfR7p7K9aXAQCRDgyj8/JXWREi0Ifi7d3QQ==}
+    engines: {node: '>= 18.12.0'}
+    peerDependencies:
+      '@mikro-orm/core': ^6.0.0
+
+  '@mikro-orm/seeder@6.4.15':
+    resolution: {integrity: sha512-jZ1Ai28mMkHSRYzxrGQEdYktRXqq5P54syNi1H3wkYmRjzYqwAD6hOKrBCOmOzYqskQRWLe042F07w/27Nqo7g==}
     engines: {node: '>= 18.12.0'}
     peerDependencies:
       '@mikro-orm/core': ^6.0.0
@@ -4589,6 +4598,12 @@ snapshots:
       - sqlite3
       - supports-color
       - tedious
+
+  '@mikro-orm/seeder@6.4.15(@mikro-orm/core@6.4.15)':
+    dependencies:
+      '@mikro-orm/core': 6.4.15
+      fs-extra: 11.3.0
+      globby: 11.1.0
 
   '@mongodb-js/saslprep@1.2.2':
     dependencies:
