@@ -16,7 +16,7 @@ export class SeederService implements OnModuleInit {
 
   async seed() {
     const isEnableSeeder = this.configService.get<number>('isEnableSeeder');
-    console.log('isEnableSeeder', isEnableSeeder);
+    Logger.log(`isEnableSeeder: ${isEnableSeeder}`, 'SeederService::seed');
     if (!isEnableSeeder) {
       Logger.log('⚠️ Database seeder is disabled. Skipping seeding process.');
       return;

@@ -64,6 +64,10 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
             this.configService.get<string>('database.mongoDbName') ||
             'nestjs-base',
           ensureIndexes: true,
+          pool: {
+            min: this.configService.get<number>('database.minPoolSize'),
+            max: this.configService.get<number>('database.maxPoolSize'),
+          },
         };
       case 'postgresql': {
         return {
@@ -82,6 +86,10 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
           dbName:
             this.configService.get<string>('database.postgresDbName') ||
             'nestjs-base',
+          pool: {
+            min: this.configService.get<number>('database.minPoolSize'),
+            max: this.configService.get<number>('database.maxPoolSize'),
+          },
         };
       }
       default: {

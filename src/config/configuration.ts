@@ -7,6 +7,9 @@ export default () => ({
   saltRound: parseInt(process.env.SALT_ROUND),
   local: process.env.LOCAL,
   database: {
+    // config
+    minPoolSize: parseInt(process.env.MIN_POOL_SIZE) || 1,
+    maxPoolSize: parseInt(process.env.MAX_POOL_SIZE) || 2,
     // mongo db
     mongoUri: process.env.MONGO_URI,
     mongoDbName: process.env.MONGO_DB_NAME,
