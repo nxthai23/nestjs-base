@@ -5,7 +5,6 @@ import {
   SerializeOptions,
   UseInterceptors,
   UseFilters,
-  Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/signIn.dto';

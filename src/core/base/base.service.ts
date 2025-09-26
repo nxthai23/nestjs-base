@@ -4,7 +4,6 @@ import {
   RequiredEntityData,
   wrap,
   EntityManager,
-  Reference,
 } from '@mikro-orm/core';
 import { IBaseService } from './base.service.interface';
 import { BaseEntity } from './base.entity';
