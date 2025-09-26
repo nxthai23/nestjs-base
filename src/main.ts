@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import { HttpExceptionFilter } from './core/filter/http-exception.filter';
-import { getMemoryUsage } from './libs/hardware';
+import { getMemoryUsage } from './utils/hardware.util';
 import { ConfigService } from '@nestjs/config';
 
 import * as dotenv from 'dotenv';

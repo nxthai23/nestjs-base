@@ -16,6 +16,8 @@ import { DatabaseConfig } from './core/database/database';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 // import { RedisModule } from '@nestjs-modules/ioredis';
+import { AppConfigModule } from './api/app-config/app-config.module';
+import { SeederModule } from '@core/database/seeder/seeder.module';
 
 @Module({
   imports: [
@@ -29,6 +31,7 @@ import { redisStore } from 'cache-manager-redis-store';
     MikroOrmModule.forRootAsync({
       useClass: DatabaseConfig,
     }),
+    SeederModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -57,6 +60,7 @@ import { redisStore } from 'cache-manager-redis-store';
         }
       },
     }),
+    AppConfigModule,
     // import redis module here for some case that cache module don't work
     // RedisModule.forRootAsync({
     //   imports: [ConfigModule],

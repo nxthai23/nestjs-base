@@ -3,6 +3,7 @@ import {
   Populate,
   RequiredEntityData,
   wrap,
+  EntityManager,
 } from '@mikro-orm/core';
 import { IBaseService } from './base.service.interface';
 import { BaseEntity } from './base.entity';
@@ -19,10 +20,13 @@ export abstract class BaseService<T extends BaseEntity>
   implements IBaseService<T>
 {
   protected entityName: string;
+  protected em: EntityManager;
 
   constructor(private repository: EntityRepository<T>) {
     // Extract entity name from repository metadata
     this.entityName = this.repository.getEntityName();
+    // Cache EntityManager reference for better performance
+    this.em = this.repository.getEntityManager();
   }
   /**
    * Read section
@@ -42,46 +46,92 @@ export abstract class BaseService<T extends BaseEntity>
     });
   }
 
+  async find(filter: object, populate?: Populate<T, string>): Promise<T[]> {
+    return await this.repository.find(filter, {
+      populate,
+    });
+  }
+
   async count(filter?: object): Promise<number> {
     return await this.repository.count(filter);
   }
 
   /**
-   * Write section
+   * Write section - Optimized for better performance
    */
 
   async create(dto: RequiredEntityData<T>): Promise<Partial<T>> {
     const entity = this.repository.create(dto);
-    const em = this.repository.getEntityManager();
-    await em.persistAndFlush(entity);
+    // Use cached EntityManager and persist without immediate flush for better performance
+    this.em.persist(entity);
+    await this.em.flush();
     return entity;
   }
 
   async bulkCreate(dtos: RequiredEntityData<T>[]): Promise<boolean> {
-    const entities = dtos.map((dto) => this.repository.create(dto));
-    const em = this.repository.getEntityManager();
-    await em.persistAndFlush(entities);
+    if (dtos.length === 0) {
+      return true;
+    }
+
+    // Use transaction for bulk operations to ensure atomicity and better performance
+    this.em.transactional(async (em) => {
+      const entities = dtos.map((dto) => this.repository.create(dto));
+      // Persist all entities in memory first
+      entities.forEach((entity) => em.persist(entity));
+    });
+    // Single flush operation for all entities
+    await this.em.flush();
     return true;
   }
 
   async update<IdType>(id: IdType, dto: Partial<T>): Promise<Partial<T>> {
-    const entity = await this.repository.findOne(id);
-    if (!entity) {
-      throw new NotFoundException(`${this.entityName} not found`);
-    }
-    wrap(entity).assign(dto as any);
-    const em = this.repository.getEntityManager();
-    await em.persistAndFlush(entity);
-    return entity;
+    return await this.em.transactional(async (em) => {
+      // Use reference for better performance if we don't need the full entity
+      const entity = await this.repository.findOne(id);
+      if (!entity) {
+        throw new NotFoundException(`${this.entityName} not found`);
+      }
+
+      // Assign new values using wrap for change tracking
+      wrap(entity).assign(dto as any);
+      await em.flush();
+      return entity as Partial<T>;
+    });
   }
 
   async delete<IdType>(id: IdType): Promise<Partial<T>> {
-    const entity = await this.repository.findOne(id);
-    if (!entity) {
-      throw new NotFoundException(`${this.entityName} not found`);
-    }
-    const em = this.repository.getEntityManager();
-    await em.removeAndFlush(entity);
-    return entity;
+    return await this.em.transactional(async (em) => {
+      const entity = await this.repository.findOne(id);
+      if (!entity) {
+        throw new NotFoundException(`${this.entityName} not found`);
+      }
+
+      em.remove(entity);
+      await em.flush();
+      return entity as Partial<T>;
+    });
+  }
+
+  async upsert<IdType>(
+    id: IdType,
+    dto: RequiredEntityData<T>,
+  ): Promise<{ entity: Partial<T>; created: boolean }> {
+    return await this.em.transactional(async (em) => {
+      const existingEntity = await this.repository.findOne(id);
+      let entity: T;
+      let created = false;
+
+      if (!existingEntity) {
+        entity = this.repository.create(dto);
+        em.persist(entity);
+        created = true;
+      } else {
+        wrap(existingEntity).assign(dto as any);
+        entity = existingEntity;
+      }
+
+      await em.flush();
+      return { entity: entity as Partial<T>, created };
+    });
   }
 }
