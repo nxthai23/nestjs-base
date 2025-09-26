@@ -1,9 +1,4 @@
-import {
-  Entity,
-  PrimaryKey,
-  Property,
-  SerializedPrimaryKey,
-} from '@mikro-orm/core';
+import { Entity, PrimaryKey, Property } from '@mikro-orm/core';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { BaseEntity } from '@core/base/base.entity';
 
@@ -11,9 +6,6 @@ import { BaseEntity } from '@core/base/base.entity';
 export class AppConfig extends BaseEntity {
   @PrimaryKey()
   _id!: ObjectId;
-
-  @SerializedPrimaryKey()
-  id!: string;
 
   @Property({ unique: true })
   key: string;

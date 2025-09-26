@@ -1,6 +1,13 @@
-import { BaseEntity as MikroOrmBaseEntity, Property } from '@mikro-orm/core';
+import {
+  BaseEntity as MikroOrmBaseEntity,
+  Property,
+  SerializedPrimaryKey,
+} from '@mikro-orm/core';
 
 export abstract class BaseEntity extends MikroOrmBaseEntity {
+  @SerializedPrimaryKey()
+  id!: string;
+
   @Property({ fieldName: 'created_at', type: 'timestamp' })
   createdAt: Date = new Date();
 
