@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 import { HttpExceptionFilter } from './core/filter/http-exception.filter';
 import { getMemoryUsage } from './utils/hardware.util';
 import { ConfigService } from '@nestjs/config';
@@ -10,11 +10,18 @@ import * as dotenv from 'dotenv';
 async function bootstrap() {
   // Reload environment variables
   dotenv.config({ override: true });
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true, // Buffer logs until logger is ready
+  });
   /**
    * define cors options then pass to options to function enableCors.
    * @see https://docs.nestjs.com/security/cors
    */
+
+  // logging (pino)
+  const logger = app.get(Logger);
+  app.useLogger(logger);
+  app.flushLogs();
 
   //  const corsOptions: any = {
   //   origin: [],
@@ -45,9 +52,18 @@ async function bootstrap() {
 
   // Log memory usage
   const memoryUsage = getMemoryUsage();
-  Logger.log('Bootstrap memory usage: \n', 'Bootstrap');
-  Logger.log(memoryUsage, 'Bootstrap');
-  Logger.log(`Server running on http://localhost:${port}`, 'Bootstrap');
+  logger.log(
+    `Bootstrap Memory → RSS: ${memoryUsage.rss.split(' -> ')[0]} | Heap: ${
+      memoryUsage.heapUsed.split(' -> ')[0]
+    }/${memoryUsage.heapTotal.split(' -> ')[0]} | External: ${
+      memoryUsage.external.split(' -> ')[0]
+    }`,
+    'App',
+  );
+  logger.log({
+    msg: `Server running on http://localhost:${port}`,
+    context: 'App',
+  });
 }
 
 bootstrap();
