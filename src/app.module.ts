@@ -82,6 +82,7 @@ import { loggerConfig } from '@core/modules/logger/pino.config';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    // LoggerMiddleware is disabled - using pino-http from LoggerModule instead
+    // consumer.apply(LoggerMiddleware).forRoutes('*');
   }
 }
