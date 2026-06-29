@@ -18,9 +18,12 @@ import { redisStore } from 'cache-manager-redis-store';
 // import { RedisModule } from '@nestjs-modules/ioredis';
 import { AppConfigModule } from './api/app-config/app-config.module';
 import { SeederModule } from '@core/database/seeder/seeder.module';
+import { LoggerModule } from 'nestjs-pino';
+import { loggerConfig } from '@core/modules/logger/pino.config';
 
 @Module({
   imports: [
+    LoggerModule.forRoot(loggerConfig),
     UserModule,
     AuthModule,
     ConfigModule.forRoot({
@@ -33,7 +36,7 @@ import { SeederModule } from '@core/database/seeder/seeder.module';
     }),
     SeederModule,
     CacheModule.registerAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule, LoggerModule],
       inject: [ConfigService],
       isGlobal: true,
       useFactory: async (configService: ConfigService) => {
@@ -79,6 +82,7 @@ import { SeederModule } from '@core/database/seeder/seeder.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    // LoggerMiddleware is disabled - using pino-http from LoggerModule instead
+    // consumer.apply(LoggerMiddleware).forRoutes('*');
   }
 }

@@ -18,13 +18,16 @@ export class SeederService implements OnModuleInit {
     const isEnableSeeder = this.configService.get<number>('isEnableSeeder');
     Logger.log(`isEnableSeeder: ${isEnableSeeder}`, 'SeederService::seed');
     if (!isEnableSeeder) {
-      Logger.log('⚠️ Database seeder is disabled. Skipping seeding process.');
+      Logger.log(
+        '⚠️ Database seeder is disabled. Skipping seeding process.',
+        'DatabaseSeeder',
+      );
       return;
     }
     const seeder = this.orm.getSeeder();
-    Logger.log('🔄 Running database seeder...');
+    Logger.log('🔄 Running database seeder...', 'DatabaseSeeder');
     await seeder.seed(DatabaseSeeder);
-    Logger.log('✅ Database seeding completed');
+    Logger.log('✅ Database seeding completed', 'DatabaseSeeder');
     return;
   }
 }

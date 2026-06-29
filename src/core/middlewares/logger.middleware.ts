@@ -18,7 +18,6 @@ export class LoggerMiddleware implements NestMiddleware {
       this.logger.log(
         `${method} | ${originalUrl} | ${statusCode} | ${contentLength} | ${userAgent} | ${ip};`,
       );
-      //@TODO: implement save log strategy later (save to file by day, remove old logs, etc.)
     });
     next();
   }
