@@ -9,6 +9,7 @@
     "target": "es2020",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
     "paths": {
       "@core/*": ["src/core/*"],
@@ -19,6 +20,7 @@
       "@/*": ["src/*"]
     },
     "incremental": true,
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
