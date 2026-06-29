@@ -4,7 +4,9 @@ import {
   RequiredEntityData,
   wrap,
   EntityManager,
+  EntityName,
 } from '@mikro-orm/core';
+import type { MongoEntityManager } from '@mikro-orm/mongodb';
 import { IBaseService } from './base.service.interface';
 import { BaseEntity } from './base.entity';
 import { NotFoundException } from '@nestjs/common';
@@ -16,9 +18,9 @@ import { NotFoundException } from '@nestjs/common';
  * @template UpdateDTO - The DTO type for updates
  * @template IdType - The type of entity ID (string | ObjectId | number)
  */
-export abstract class BaseService<T extends BaseEntity>
-  implements IBaseService<T>
-{
+export abstract class BaseService<
+  T extends BaseEntity,
+> implements IBaseService<T> {
   protected entityName: string;
   protected em: EntityManager;
 
@@ -133,5 +135,26 @@ export abstract class BaseService<T extends BaseEntity>
       await em.flush();
       return { entity: entity as Partial<T>, created };
     });
+  }
+
+  /**
+   * Mixed section - Raw aggregation/query for MongoDB and PostgreSQL
+   *
+   * MongoDB: pass a Document[] pipeline. Include $limit, $facet, etc. in pipeline.
+   * PostgreSQL: pass a raw SQL string. Include LIMIT, OFFSET in the query.
+   */
+  async aggregate<R = any>(query: object[] | string): Promise<R[]> {
+    // MongoDB pipeline (array of stages)
+    if (Array.isArray(query)) {
+      const mongoEm = this.em as MongoEntityManager;
+      return (await mongoEm.aggregate(
+        this.entityName as unknown as EntityName<T>,
+        query,
+      )) as R[];
+    }
+
+    // PostgreSQL raw SQL
+    const conn = this.em.getConnection();
+    return (await conn.execute(query)) as R[];
   }
 }
