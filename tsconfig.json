@@ -10,16 +10,15 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": "./",
+    "baseUrl": "./src",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@api/*": ["src/api/*"],
-      "@utils/*": ["src/utils/*"],
-      "@config/*": ["src/config/*"],
-      "@libs/*": ["src/libs/*"],
-      "@/*": ["src/*"]
+      "@core/*": ["core/*"],
+      "@api/*": ["api/*"],
+      "@utils/*": ["utils/*"],
+      "@config/*": ["config/*"],
+      "@libs/*": ["libs/*"],
+      "@/*": ["*"]
     },
-    "incremental": true,
     "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "strictNullChecks": false,

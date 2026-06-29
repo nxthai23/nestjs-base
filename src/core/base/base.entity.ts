@@ -2,7 +2,7 @@ import { BaseEntity as MikroOrmBaseEntity } from '@mikro-orm/core';
 import { Property, SerializedPrimaryKey } from '@mikro-orm/decorators/legacy';
 
 export abstract class BaseEntity extends MikroOrmBaseEntity {
-  @SerializedPrimaryKey()
+  @SerializedPrimaryKey({ type: 'string' })
   id!: string;
 
   @Property({ fieldName: 'created_at', type: 'timestamp' })
