@@ -24,7 +24,7 @@ export class SeederService implements OnModuleInit {
       );
       return;
     }
-    const seeder = this.orm.getSeeder();
+    const seeder = this.orm.seeder;
     Logger.log('🔄 Running database seeder...', 'DatabaseSeeder');
     await seeder.seed(DatabaseSeeder);
     Logger.log('✅ Database seeding completed', 'DatabaseSeeder');
