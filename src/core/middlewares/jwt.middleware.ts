@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { NextFunction } from 'express';
-import { JwtStrategy } from 'src/api/auth/strategies/jwt';
+import { JwtStrategy } from '@/api/auth/strategies/jwt';
 import { ParseObjectIdPipe } from '../pipe/parse-objectid.pipe';
 
 /**

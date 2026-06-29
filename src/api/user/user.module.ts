@@ -2,9 +2,9 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { User } from './entities/user.entity';
-import { JwtMiddleware } from 'src/core/middlewares/jwt.middleware';
+import { JwtMiddleware } from '@/core/middlewares/jwt.middleware';
 import { JwtService } from '@nestjs/jwt';
-import { JwtStrategy } from 'src/api/auth/strategies/jwt';
+import { JwtStrategy } from '@/api/auth/strategies/jwt';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 
 @Module({

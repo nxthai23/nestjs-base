@@ -1,4 +1,4 @@
-import { Entity, Property, PrimaryKey } from '@mikro-orm/core';
+import { Entity, Property, PrimaryKey } from '@mikro-orm/decorators/legacy';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { BaseEntity } from '../../../core/base/base.entity';
 import { Exclude } from 'class-transformer';

@@ -4,6 +4,7 @@ import {
   MikroOrmOptionsFactory,
 } from '@mikro-orm/nestjs';
 import { LoadStrategy } from '@mikro-orm/core';
+import { ReflectMetadataProvider } from '@mikro-orm/decorators/legacy';
 import { MongoDriver } from '@mikro-orm/mongodb';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { join } from 'path';
@@ -19,6 +20,7 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
     const nodeEnv = this.configService.getOrThrow<string>('NODE_ENV');
 
     const baseOptions = {
+      metadataProvider: ReflectMetadataProvider,
       cache: { enabled: false },
       loadStrategy: LoadStrategy.JOINED,
       debug: nodeEnv !== 'production',

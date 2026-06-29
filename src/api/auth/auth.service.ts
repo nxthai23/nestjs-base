@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserService } from 'src/api/user/user.service';
-import { User } from 'src/api/user/entities/user.entity';
+import { UserService } from '@/api/user/user.service';
+import { User } from '@/api/user/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { LocalStrategy } from './strategies/local';
 import { JwtService } from '@nestjs/jwt';
-import { CreateUserDto } from 'src/api/user/dto/create-user.dto';
+import { CreateUserDto } from '@/api/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
 import { JwtPayload } from './auth.type';
 

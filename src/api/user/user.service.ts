@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/core';
 import { User } from './entities/user.entity';
-import { BaseService } from 'src/core/base/base.service';
+import { BaseService } from '@/core/base/base.service';
 
 @Injectable()
 export class UserService extends BaseService<User> {
