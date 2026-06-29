@@ -31,6 +31,17 @@ export abstract class BaseService<
     this.em = this.repository.getEntityManager();
   }
   /**
+   * Manage section
+   */
+  getEntityManager(): EntityManager {
+    return this.em;
+  }
+
+  getRepository(): EntityRepository<T> {
+    return this.repository;
+  }
+
+  /**
    * Read section
    */
   async findById<IdType>(
@@ -134,6 +145,34 @@ export abstract class BaseService<
 
       await em.flush();
       return { entity: entity as Partial<T>, created };
+    });
+  }
+
+  /**
+   * Execute a callback within a transaction.
+   * All EM operations inside `fn` are scoped to the same transaction.
+   * Auto-commits on success, auto-rollbacks on error.
+   * Works for both PostgreSQL (native) and MongoDB (replica set required).
+   *
+   * @example
+   * ```ts
+   * const result = await this.withTransaction(async (tx) => {
+   *   const user = await tx.findOne(User, userId);
+   *   user.balance -= amount;
+   *   await tx.flush();
+   *
+   *   const invoice = tx.create(Invoice, { ... });
+   *   tx.persist(invoice);
+   *   await tx.flush();
+   *
+   *   return invoice;
+   * });
+   * ```
+   */
+  async withTransaction<R>(fn: (em: EntityManager) => Promise<R>): Promise<R> {
+    return await this.em.transactional(async (em) => {
+      // Use the forked EM for all operations within the callback
+      return await fn(em as EntityManager);
     });
   }
 

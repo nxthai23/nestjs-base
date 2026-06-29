@@ -4,7 +4,7 @@
  * @template IdType - The type of entity ID (string | ObjectId | number)
  */
 
-import { Populate, RequiredEntityData } from '@mikro-orm/core';
+import { Populate, RequiredEntityData, EntityManager } from '@mikro-orm/core';
 
 export interface Read<T> {
   findById<IdType>(id: IdType, populate: Populate<T, string>): Promise<T | any>;
@@ -25,6 +25,12 @@ export interface Write<T> {
 }
 
 export interface Mixed<T> {
+  /**
+   * Execute a callback within a transaction.
+   * Auto-commits on success, auto-rollbacks on error.
+   */
+  withTransaction<R>(fn: (em: EntityManager) => Promise<R>): Promise<R>;
+
   /**
    * Execute a raw aggregation pipeline (MongoDB) or raw SQL query (PostgreSQL).
    *
