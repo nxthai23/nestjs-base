@@ -10,9 +10,8 @@ import { AuthModule } from './api/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import configuration from './config/configuration';
-import { APP_PIPE, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_PIPE } from '@nestjs/core';
 import { LoggerMiddleware } from './core/middlewares/logger.middleware';
-import { ResponseInterceptor } from './core/interceptors/response.interceptor';
 import { DatabaseConfig } from './core/database/database';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
@@ -78,10 +77,6 @@ import { loggerConfig } from '@core/modules/logger/pino.config';
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ResponseInterceptor,
     },
   ],
 })

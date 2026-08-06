@@ -88,22 +88,53 @@ To use exception filter:
 
 ### API Response envelope
 
-Every response is automatically wrapped by the global `ResponseInterceptor`
-into a consistent JSON shape — controllers don't need to do anything special,
-just return data as usual:
+Every controller builds its own `ApiResult` envelope explicitly — there is no
+interceptor auto-wrapping responses. Call `ApiResult.success()` (or
+`.paginated()`) and return the result:
+
+```typescript
+import { ApiResult } from '@core/response/api-result';
+
+@Get('/me')
+async findOne(@Req() req: Request) {
+  const user = await this.userService.findById(req['userId']);
+  return ApiResult.success(user, 'User retrieved successfully');
+}
+```
+
+which produces:
 
 ```json
 {
   "success": true,
   "statusCode": 200,
-  "message": "Success",
+  "message": "User retrieved successfully",
   "data": {},
   "timestamp": "2026-08-06T10:00:00.000Z"
 }
 ```
 
-Errors thrown via `HttpException` (caught by `HttpExceptionFilter`) get the
-mirrored shape:
+**Custom status code** (e.g. `201` on create): pass it as the third argument —
+`ApiResult.success(user, 'User created', HttpStatus.CREATED)`.
+
+**Paginated list responses:** call `ApiResult.paginated(items, meta)`:
+
+```typescript
+import { ApiResult } from '@core/response/api-result';
+
+async fetch(page: number, limit: number) {
+  const [items, total] = await Promise.all([
+    this.userService.find({}, undefined),
+    this.userService.count({}),
+  ]);
+  const meta = { page, limit, total, totalPages: Math.ceil(total / limit) };
+  return ApiResult.paginated(items, meta);
+}
+```
+
+**Errors:** `HttpExceptionFilter` builds its response the same way, via
+`ApiResult.error(message, statusCode, path)` — you don't call this directly,
+just `@UseFilters(HttpExceptionFilter)` and throw:
 
 ```json
 {
@@ -112,36 +143,6 @@ mirrored shape:
   "message": "User not found",
   "path": "/users/me",
   "timestamp": "2026-08-06T10:00:00.000Z"
-}
-```
-
-**Custom or conditional message:** return an `ApiResult` directly from the
-controller — the interceptor detects it's already wrapped and passes it
-through unchanged:
-
-```typescript
-import { ApiResult } from '@core/response/api-result';
-
-return created
-  ? ApiResult.success(user, 'User created', HttpStatus.CREATED)
-  : ApiResult.success(user, 'User updated');
-```
-
-**Paginated list responses:** return `{ items, meta }` (a `Paginated<T>`) and
-the interceptor auto-hoists `items` into `data` and `meta` into the envelope:
-
-```typescript
-import { Paginated } from '@core/response/api-result';
-
-async fetch(page: number, limit: number): Promise<Paginated<User>> {
-  const [items, total] = await Promise.all([
-    this.userService.find({}, undefined),
-    this.userService.count({}),
-  ]);
-  return {
-    items,
-    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
-  };
 }
 ```
 

@@ -51,4 +51,55 @@ describe('ApiResult', () => {
       expect(result.meta).toEqual(meta);
     });
   });
+
+  describe('error', () => {
+    it('builds an error envelope with success: false', () => {
+      const result = ApiResult.error(
+        'User not found',
+        HttpStatus.NOT_FOUND,
+        '/users/me',
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.statusCode).toBe(HttpStatus.NOT_FOUND);
+      expect(result.message).toBe('User not found');
+      expect(result.path).toBe('/users/me');
+      expect(result.data).toBeUndefined();
+      expect(result.meta).toBeUndefined();
+    });
+
+    it('stamps an ISO-8601 timestamp', () => {
+      const result = ApiResult.error('Internal server error', 500, '/users');
+
+      expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
+    });
+
+    it('omits data and meta from the serialized JSON output', () => {
+      const result = ApiResult.error('Bad request', HttpStatus.BAD_REQUEST, '/auth/login');
+
+      const json = JSON.parse(JSON.stringify(result));
+      expect(json).toEqual({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: 'Bad request',
+        path: '/auth/login',
+        timestamp: result.timestamp,
+      });
+    });
+  });
+
+  describe('success (serialized output)', () => {
+    it('omits path from the serialized JSON output', () => {
+      const result = ApiResult.success({ id: '1' }, 'User created', HttpStatus.CREATED);
+
+      const json = JSON.parse(JSON.stringify(result));
+      expect(json).toEqual({
+        success: true,
+        statusCode: HttpStatus.CREATED,
+        message: 'User created',
+        data: { id: '1' },
+        timestamp: result.timestamp,
+      });
+    });
+  });
 });

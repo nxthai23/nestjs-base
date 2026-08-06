@@ -16,7 +16,8 @@ export class ApiResult<T = unknown> {
   readonly success: boolean;
   readonly statusCode: number;
   readonly message: string;
-  readonly data: T;
+  readonly data?: T;
+  readonly path?: string;
   readonly timestamp: string;
   readonly meta?: PaginationMeta;
 
@@ -24,13 +25,15 @@ export class ApiResult<T = unknown> {
     success: boolean;
     statusCode: number;
     message: string;
-    data: T;
+    data?: T;
+    path?: string;
     meta?: PaginationMeta;
   }) {
     this.success = partial.success;
     this.statusCode = partial.statusCode;
     this.message = partial.message;
     this.data = partial.data;
+    this.path = partial.path;
     this.timestamp = new Date().toISOString();
     this.meta = partial.meta;
   }
@@ -56,5 +59,13 @@ export class ApiResult<T = unknown> {
       data: items,
       meta,
     });
+  }
+
+  static error(
+    message: string,
+    statusCode: number,
+    path: string,
+  ): ApiResult<null> {
+    return new ApiResult<null>({ success: false, statusCode, message, path });
   }
 }

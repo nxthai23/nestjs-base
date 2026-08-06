@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { HttpExceptionFilter } from '../http-exception.filter';
+import { ApiResult } from '../../response/api-result';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
@@ -33,6 +34,7 @@ describe('HttpExceptionFilter', () => {
 
     expect(statusMock).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
     const body = jsonMock.mock.calls[0][0];
+    expect(body).toBeInstanceOf(ApiResult);
     expect(body.success).toBe(false);
     expect(body.statusCode).toBe(HttpStatus.NOT_FOUND);
     expect(body.message).toBe('User not found');
