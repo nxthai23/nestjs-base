@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { get } from 'lodash';
+import { ApiResult } from '../response/api-result';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -14,16 +15,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
     const status = exception.getStatus();
-    const message = get(
-      exception.getResponse(),
-      'message',
-      'Internal server error',
-    );
+    const exceptionResponse = exception.getResponse();
+    const message =
+      typeof exceptionResponse === 'string'
+        ? exceptionResponse
+        : get(exceptionResponse, 'message', 'Internal server error');
 
-    response.status(status).json({
-      statusCode: status,
-      path: request.url,
-      message,
-    });
+    response.status(status).json(ApiResult.error(message, status, request.url));
   }
 }

@@ -56,7 +56,8 @@ docker-compose up -d --build
 - `@/*` → `src/*`
 
 **Cross-cutting concerns** (in `src/core/`):
-- `filter/http-exception.filter.ts` — global HTTP error filter; use with `@UseFilters(HttpExceptionFilter)` and **throw** errors (don't return them)
+- `filter/http-exception.filter.ts` — global HTTP error filter; use with `@UseFilters(HttpExceptionFilter)` and **throw** errors (don't return them). Builds its response via `ApiResult.error(message, statusCode, path)`, emitting `{ success: false, statusCode, message, path, timestamp }`.
+- `response/api-result.ts` — `ApiResult<T>` response envelope (`success`, `statusCode`, `message`, `data`, `timestamp`, optional `meta`/`path`). Every controller builds its own envelope explicitly — there is no auto-wrapping interceptor — via `ApiResult.success(data, message?, statusCode?)`, `ApiResult.paginated(items, meta, message?, statusCode?)`, or `ApiResult.error(message, statusCode, path)`
 - `middlewares/logger.middleware.ts` — request logging (applied globally)
 - `decorators/current-user.decorator.ts` — `@CurrentUser()` param decorator
 - `docs/swagger.ts` — Swagger UI setup (served at `/api`)
