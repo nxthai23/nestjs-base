@@ -15,6 +15,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '@/core/guard/jwt.auth.guard';
 import { UserSerialize } from './interceptor/user.interceptor';
 import { HttpExceptionFilter } from '@/core/filter/http-exception.filter';
+import { ApiResult } from '@core/response/api-result';
 
 // @TODO: add admin validation later for this controller
 
@@ -30,40 +31,28 @@ export class UserController {
 
   @Get()
   async fetch() {
-    try {
-      return this.userService.findAll();
-    } catch (err) {
-      throw err;
-    }
+    const users = await this.userService.findAll();
+    return ApiResult.success(users, 'Users retrieved successfully');
   }
 
   @Get('/me')
   async findOne(@Req() req: Request) {
-    try {
-      const userId = req['userId'];
-      return await this.userService.findById(userId);
-    } catch (err) {
-      throw err;
-    }
+    const userId = req['userId'];
+    const user = await this.userService.findById(userId);
+    return ApiResult.success(user, 'User retrieved successfully');
   }
 
   @Patch('/me')
-  update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
-    try {
-      const userId = req['userId'];
-      return this.userService.update(userId, updateUserDto);
-    } catch (err) {
-      throw err;
-    }
+  async update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
+    const userId = req['userId'];
+    const user = await this.userService.update(userId, updateUserDto);
+    return ApiResult.success(user, 'User updated successfully');
   }
 
   @Delete('/me')
-  delete(@Req() req: Request) {
-    try {
-      const userId = req['userId'];
-      return this.userService.delete(userId);
-    } catch (err) {
-      throw err;
-    }
+  async delete(@Req() req: Request) {
+    const userId = req['userId'];
+    const user = await this.userService.delete(userId);
+    return ApiResult.success(user, 'User deleted successfully');
   }
 }
