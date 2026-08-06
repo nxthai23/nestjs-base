@@ -1,21 +1,17 @@
-FROM node:18
+FROM node:24.19.0
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+RUN npm install -g pnpm@11.5.0
 
-RUN npm install
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
-# install bcrypt on ubuntu, this not work with same version of OSX
-# so uninstall it and re-install again
-RUN npm uninstall bcrypt
-
-RUN npm install bcrypt
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN npm run build
+RUN pnpm build
 
 EXPOSE 8080
 
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "run", "start:prod"]

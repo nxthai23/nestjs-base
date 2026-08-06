@@ -146,6 +146,50 @@ just `@UseFilters(HttpExceptionFilter)` and throw:
 }
 ```
 
+## Claude PR Review
+
+Pull requests targeting `dev` are automatically reviewed by Claude via the
+[`claude-pr-review.yml`](.github/workflows/claude-pr-review.yml) GitHub Actions
+workflow ([`anthropics/claude-code-action`](https://github.com/anthropics/claude-code-action)).
+Claude posts a top-level summary plus inline comments on the PR — it does not
+push commits or block merging.
+
+### Setup (per repository)
+
+Requires admin access to the GitHub repo.
+
+1. **Install the Claude GitHub App** on the repository: https://github.com/apps/claude
+
+2. **Generate an auth token.** Two options:
+   - `CLAUDE_CODE_OAUTH_TOKEN` — uses your Claude Pro/Max/Team/Enterprise subscription. Generate locally:
+     ```bash
+     claude setup-token
+     ```
+   - `ANTHROPIC_API_KEY` — a Claude Console API key, billed separately from any subscription. Use this for shared/org-wide setups, since an OAuth token is tied to the subscription of whoever ran `setup-token`.
+
+3. **Add the token as a repo secret** (Settings → Secrets and variables → Actions), or via CLI:
+   ```bash
+   gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo>
+   ```
+   If you used an API key instead, name the secret `ANTHROPIC_API_KEY` and update the
+   `with:` input in the workflow file from `claude_code_oauth_token` to `anthropic_api_key`.
+
+4. Copy [`.github/workflows/claude-pr-review.yml`](.github/workflows/claude-pr-review.yml)
+   into the target repository and adjust the `branches:` filter if it should trigger on a
+   branch other than `dev`.
+
+### Notes
+
+- Secrets are withheld from workflow runs triggered by PRs from forks, so review only runs
+  on PRs from branches within the same repository.
+- An OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`) draws from the token-holder's Claude subscription
+  usage limits (rolling 5-hour and weekly windows, shared across all models). If that limit is
+  hit, review runs are blocked with a `You've hit your session/weekly limit` error until the
+  window resets — there's no automatic fallback to API billing, unless the token-holder has
+  enabled [usage credits](https://support.claude.com/en/articles/12429409-extra-usage-for-paid-claude-plans)
+  on their account to buy extra usage. Use `ANTHROPIC_API_KEY` instead if you need reviews to
+  keep running regardless of a subscription's usage limits.
+
 ## Support
 
 Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
