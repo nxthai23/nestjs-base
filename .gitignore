@@ -50,3 +50,6 @@ lerna-debug.log*
 .terraformrc
 terraform.rc
 .terraform.tfstate.lock.info
+
+# Superpowers subagent-driven-development scratch state
+.superpowers/
