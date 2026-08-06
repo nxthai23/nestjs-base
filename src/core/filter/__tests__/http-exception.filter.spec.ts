@@ -1,4 +1,9 @@
-import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  NotFoundException,
+} from '@nestjs/common';
 import { HttpExceptionFilter } from '../http-exception.filter';
 
 describe('HttpExceptionFilter', () => {
@@ -43,5 +48,19 @@ describe('HttpExceptionFilter', () => {
 
     const body = jsonMock.mock.calls[0][0];
     expect(body.message).toBe('Internal server error');
+  });
+
+  it('extracts the message from an object-shaped exception response', () => {
+    const exception = new NotFoundException('User not found');
+    const host = buildHost('/users/me');
+
+    filter.catch(exception, host);
+
+    expect(statusMock).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    const body = jsonMock.mock.calls[0][0];
+    expect(body.success).toBe(false);
+    expect(body.statusCode).toBe(HttpStatus.NOT_FOUND);
+    expect(body.message).toBe('User not found');
+    expect(body.path).toBe('/users/me');
   });
 });
