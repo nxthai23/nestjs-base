@@ -41,7 +41,7 @@ export class ResponseInterceptor
         }
 
         if (isPaginated(value)) {
-          return ApiResult.paginated(value.items, value.meta);
+          return ApiResult.paginated(value.items, value.meta, 'Success', statusCode);
         }
 
         return ApiResult.success(value, 'Success', statusCode);

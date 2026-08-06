@@ -62,6 +62,17 @@ describe('ResponseInterceptor', () => {
     });
   });
 
+  it('uses the response status code for a paginated result', (done) => {
+    const context = buildContext(HttpStatus.PARTIAL_CONTENT);
+    const meta = { page: 1, limit: 20, total: 0, totalPages: 0 };
+    const handler = buildHandler({ items: [], meta });
+
+    interceptor.intercept(context, handler).subscribe((result) => {
+      expect(result.statusCode).toBe(HttpStatus.PARTIAL_CONTENT);
+      done();
+    });
+  });
+
   it('wraps void/undefined return values', (done) => {
     const context = buildContext(HttpStatus.NO_CONTENT);
     const handler = buildHandler(undefined);
