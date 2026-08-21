@@ -6,9 +6,10 @@ import { JwtMiddleware } from '@/core/middlewares/jwt.middleware';
 import { JwtService } from '@nestjs/jwt';
 import { JwtStrategy } from '@/api/auth/strategies/jwt';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { RoleModule } from '@api/role/role.module';
 
 @Module({
-  imports: [MikroOrmModule.forFeature([User])],
+  imports: [MikroOrmModule.forFeature([User]), RoleModule],
   controllers: [UserController],
   providers: [UserService, JwtService, JwtStrategy],
   exports: [UserService],
