@@ -14,8 +14,7 @@ export type AppAbility = MongoAbility<[string, Subjects]>;
 @Injectable()
 export class CaslAbilityFactory {
   createForUser(user: User): AppAbility {
-    const rules: RawRuleOf<AppAbility>[] = user.role.permissions
-      .getItems()
+    const rules: RawRuleOf<AppAbility>[] = (user.role?.permissions.getItems() ?? [])
       .map((permission) => ({
         action: permission.action,
         subject: permission.subject as Extract<Subjects, string>,

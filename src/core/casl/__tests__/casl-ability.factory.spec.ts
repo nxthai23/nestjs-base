@@ -44,4 +44,12 @@ describe('CaslAbilityFactory', () => {
     expect(ability.can('read', subject('User', otherRecord))).toBe(false);
     expect(ability.can('delete', subject('User', ownRecord))).toBe(false);
   });
+
+  it('denies everything instead of throwing when the user has no role', () => {
+    const roleless = { id: 'user-1', role: undefined } as unknown as User;
+
+    const ability = factory.createForUser(roleless);
+
+    expect(ability.can('read', subject('User', roleless))).toBe(false);
+  });
 });
