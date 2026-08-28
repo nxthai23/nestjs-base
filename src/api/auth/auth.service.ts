@@ -43,14 +43,14 @@ export class AuthService {
   async signIn(authType: string, user: CreateUserDto): Promise<User> {
     const { username, password } = user;
     const hashPassword = await this.localStrategy.hash(password);
-    const userData: Partial<CreateUserDto> = {
+    const userData: Pick<CreateUserDto, 'username' | 'password'> = {
       username,
       password: hashPassword,
     };
     let result: any;
     switch (authType.toUpperCase()) {
       case this.configService.get<string>('local'):
-        const user = await this.userService.create(userData);
+        const user = await this.userService.createWithDefaultRole(userData);
         result = user;
         break;
       default:

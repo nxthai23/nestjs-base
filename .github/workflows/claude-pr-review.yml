@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
       id-token: write
 
     steps:
@@ -25,6 +25,12 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Use the workflow's own token instead of the Claude GitHub App,
+          # which isn't installed on this repo/org.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Surface the review in the Action's own Step Summary instead of
+          # posting a PR comment.
+          display_report: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
@@ -36,10 +42,11 @@ jobs:
             - Performance considerations
 
             Note: The PR branch is already checked out in the current working directory.
+            Use `gh pr diff` / `gh pr view` (read-only) to inspect the change if needed.
 
-            Use `gh pr comment` for top-level feedback.
-            Use `mcp__github_inline_comment__create_inline_comment` (with `confirmed: true`) to highlight specific code issues.
-            Only post GitHub comments - don't submit review text as messages.
+            Do NOT post anything to GitHub - no PR comments, no inline review
+            comments. Just report your findings in your final response; it
+            will be shown in the workflow's Step Summary.
 
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*)"

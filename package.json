@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@casl/ability": "^7.0.1",
     "@mikro-orm/core": "^7.1.5",
     "@mikro-orm/decorators": "^7.1.5",
     "@mikro-orm/mongodb": "^7.1.5",
@@ -100,6 +101,14 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^@core/(.*)$": "<rootDir>/core/$1",
+      "^@api/(.*)$": "<rootDir>/api/$1",
+      "^@utils/(.*)$": "<rootDir>/utils/$1",
+      "^@config/(.*)$": "<rootDir>/config/$1",
+      "^@libs/(.*)$": "<rootDir>/libs/$1",
+      "^@/(.*)$": "<rootDir>/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

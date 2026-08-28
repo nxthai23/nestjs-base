@@ -24,7 +24,7 @@ export interface Write<T> {
   ): Promise<{ entity: Partial<T>; created: boolean }>;
 }
 
-export interface Mixed<T> {
+export interface Mixed {
   /**
    * Execute a callback within a transaction.
    * Auto-commits on success, auto-rollbacks on error.
@@ -43,4 +43,4 @@ export interface Mixed<T> {
   aggregate<R = any>(query: object[] | string): Promise<R[]>;
 }
 
-export interface IBaseService<T> extends Read<T>, Write<T>, Mixed<T> {}
+export interface IBaseService<T> extends Read<T>, Write<T>, Mixed {}

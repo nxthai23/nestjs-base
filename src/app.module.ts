@@ -11,7 +11,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import configuration from './config/configuration';
 import { APP_PIPE } from '@nestjs/core';
-import { LoggerMiddleware } from './core/middlewares/logger.middleware';
 import { DatabaseConfig } from './core/database/database';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
@@ -81,7 +80,7 @@ import { loggerConfig } from '@core/modules/logger/pino.config';
   ],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
+  configure(_consumer: MiddlewareConsumer) {
     // LoggerMiddleware is disabled - using pino-http from LoggerModule instead
     // consumer.apply(LoggerMiddleware).forRoutes('*');
   }
