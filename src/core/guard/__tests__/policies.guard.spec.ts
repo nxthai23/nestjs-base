@@ -17,7 +17,9 @@ describe('PoliciesGuard', () => {
   }
 
   function makeReflector(returnValue: any) {
-    return { get: jest.fn().mockReturnValue(returnValue) } as unknown as Reflector;
+    return {
+      get: jest.fn().mockReturnValue(returnValue),
+    } as unknown as Reflector;
   }
 
   function makeFactory() {
@@ -33,14 +35,20 @@ describe('PoliciesGuard', () => {
 
   it('allows the request when every handler passes', () => {
     const factory = makeFactory();
-    const guard = new PoliciesGuard(makeReflector([() => true, () => true]), factory);
+    const guard = new PoliciesGuard(
+      makeReflector([() => true, () => true]),
+      factory,
+    );
 
     expect(guard.canActivate(makeContext())).toBe(true);
     expect(factory.createForUser).toHaveBeenCalledWith(mockUser);
   });
 
   it('throws ForbiddenException when any handler fails', () => {
-    const guard = new PoliciesGuard(makeReflector([() => true, () => false]), makeFactory());
+    const guard = new PoliciesGuard(
+      makeReflector([() => true, () => false]),
+      makeFactory(),
+    );
     expect(() => guard.canActivate(makeContext())).toThrow(ForbiddenException);
   });
 });

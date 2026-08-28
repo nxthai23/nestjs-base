@@ -1,4 +1,9 @@
-import { Entity, PrimaryKey, Property, OneToMany } from '@mikro-orm/decorators/legacy';
+import {
+  Entity,
+  PrimaryKey,
+  Property,
+  OneToMany,
+} from '@mikro-orm/decorators/legacy';
 import { Collection } from '@mikro-orm/core';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { BaseEntity } from '@core/base/base.entity';

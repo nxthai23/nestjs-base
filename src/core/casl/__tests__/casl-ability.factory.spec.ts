@@ -2,7 +2,11 @@ import { subject } from '@casl/ability';
 import { CaslAbilityFactory } from '../casl-ability.factory';
 import { User } from '@api/user/entities/user.entity';
 
-type FakePermission = { action: string; subject: string; conditions?: Record<string, unknown> };
+type FakePermission = {
+  action: string;
+  subject: string;
+  conditions?: Record<string, unknown>;
+};
 
 function makeUser(permissions: FakePermission[], id = 'user-1'): User {
   return {

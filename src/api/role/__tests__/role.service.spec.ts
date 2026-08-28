@@ -47,7 +47,9 @@ describe('RoleService', () => {
   }
 
   it('findByName looks up a role by its name field', async () => {
-    const findOne = jest.fn().mockResolvedValue({ id: 'role-1', name: 'admin' });
+    const findOne = jest
+      .fn()
+      .mockResolvedValue({ id: 'role-1', name: 'admin' });
     const service = makeService(findOne);
 
     const result = await service.findByName('admin');

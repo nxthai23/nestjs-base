@@ -22,7 +22,9 @@ describe('UserService.createWithDefaultRole', () => {
 
   it('attaches the default "user" role when creating an account', async () => {
     const defaultRole = { id: 'role-user', name: 'user' };
-    const roleService = { findByName: jest.fn().mockResolvedValue(defaultRole) };
+    const roleService = {
+      findByName: jest.fn().mockResolvedValue(defaultRole),
+    };
     const service = makeUserService(roleService);
 
     const result = await service.createWithDefaultRole({

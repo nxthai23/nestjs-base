@@ -14,15 +14,16 @@ export type AppAbility = MongoAbility<[string, Subjects]>;
 @Injectable()
 export class CaslAbilityFactory {
   createForUser(user: User): AppAbility {
-    const rules: RawRuleOf<AppAbility>[] = (user.role?.permissions.getItems() ?? [])
-      .map((permission) => ({
-        action: permission.action,
-        subject: permission.subject as Extract<Subjects, string>,
-        conditions: permission.conditions
-          ? interpolateConditions(permission.conditions, user)
-          : undefined,
-        inverted: permission.inverted ?? false,
-      }));
+    const rules: RawRuleOf<AppAbility>[] = (
+      user.role?.permissions.getItems() ?? []
+    ).map((permission) => ({
+      action: permission.action,
+      subject: permission.subject as Extract<Subjects, string>,
+      conditions: permission.conditions
+        ? interpolateConditions(permission.conditions, user)
+        : undefined,
+      inverted: permission.inverted ?? false,
+    }));
 
     return createMongoAbility<AppAbility>(rules);
   }

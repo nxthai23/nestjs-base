@@ -9,7 +9,6 @@ type SwaggerConfig = {
 };
 
 export class Swagger {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   constructor() {}
 
   getConfig(config: SwaggerConfig) {

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository, RequiredEntityData } from '@mikro-orm/core';
 import { User } from './entities/user.entity';
@@ -29,7 +33,9 @@ export class UserService extends BaseService<User> {
   }): Promise<Partial<User>> {
     const defaultRole = await this.roleService.findByName('user');
     if (!defaultRole) {
-      throw new InternalServerErrorException('Default "user" role is not seeded');
+      throw new InternalServerErrorException(
+        'Default "user" role is not seeded',
+      );
     }
     return this.create({
       ...data,

@@ -75,7 +75,11 @@ describe('ApiResult', () => {
     });
 
     it('omits data and meta from the serialized JSON output', () => {
-      const result = ApiResult.error('Bad request', HttpStatus.BAD_REQUEST, '/auth/login');
+      const result = ApiResult.error(
+        'Bad request',
+        HttpStatus.BAD_REQUEST,
+        '/auth/login',
+      );
 
       const json = JSON.parse(JSON.stringify(result));
       expect(json).toEqual({
@@ -90,7 +94,11 @@ describe('ApiResult', () => {
 
   describe('success (serialized output)', () => {
     it('omits path from the serialized JSON output', () => {
-      const result = ApiResult.success({ id: '1' }, 'User created', HttpStatus.CREATED);
+      const result = ApiResult.success(
+        { id: '1' },
+        'User created',
+        HttpStatus.CREATED,
+      );
 
       const json = JSON.parse(JSON.stringify(result));
       expect(json).toEqual({

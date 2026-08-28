@@ -32,7 +32,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     try {
       const isMatch = await bcrypt.compare(plainPassword, hashPassword);
       return isMatch;
-    } catch (err) {
+    } catch {
       throw new UnauthorizedException('Wrong password!');
     }
   }

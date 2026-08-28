@@ -40,7 +40,10 @@ export class RoleSeeder extends Seeder {
       }
 
       roleEntry.permissions.forEach((permission) => {
-        const newPermission = em.create(Permission, { ...permission, role } as any);
+        const newPermission = em.create(Permission, {
+          ...permission,
+          role,
+        } as any);
         em.persist(newPermission);
         createdPermissionCount += 1;
       });

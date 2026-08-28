@@ -21,7 +21,10 @@ export class SeederService implements OnModuleInit {
     // Roles/permissions are required for authorization to function at all,
     // so they must be seeded unconditionally (RoleSeeder is idempotent).
     // Optional reference/demo data below stays behind ENABLE_SEEDER.
-    Logger.log('🔄 Ensuring default roles/permissions exist...', 'DatabaseSeeder');
+    Logger.log(
+      '🔄 Ensuring default roles/permissions exist...',
+      'DatabaseSeeder',
+    );
     await seeder.seed(RoleSeeder);
 
     const isEnableSeeder = this.configService.get<number>('isEnableSeeder');

@@ -1,7 +1,15 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CaslAbilityFactory } from '@core/casl/casl-ability.factory';
-import { CHECK_POLICIES_KEY, PolicyHandlerCallback } from '@core/decorators/check-policies.decorator';
+import {
+  CHECK_POLICIES_KEY,
+  PolicyHandlerCallback,
+} from '@core/decorators/check-policies.decorator';
 
 @Injectable()
 export class PoliciesGuard implements CanActivate {
@@ -12,7 +20,10 @@ export class PoliciesGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const handlers =
-      this.reflector.get<PolicyHandlerCallback[]>(CHECK_POLICIES_KEY, context.getHandler()) ?? [];
+      this.reflector.get<PolicyHandlerCallback[]>(
+        CHECK_POLICIES_KEY,
+        context.getHandler(),
+      ) ?? [];
 
     if (handlers.length === 0) {
       return true;
