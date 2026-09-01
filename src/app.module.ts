@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { UserModule } from './api/user/user.module';
 import { AuthModule } from './api/auth/auth.module';
+import { HealthModule } from './api/health/health.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import configuration from './config/configuration';
@@ -25,6 +26,7 @@ import { loggerConfig } from '@core/modules/logger/pino.config';
     LoggerModule.forRoot(loggerConfig),
     UserModule,
     AuthModule,
+    HealthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       cache: false,
