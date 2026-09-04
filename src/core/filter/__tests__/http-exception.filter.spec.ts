@@ -4,18 +4,19 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import type { Mock } from 'vitest';
 import { HttpExceptionFilter } from '../http-exception.filter';
 import { ApiResult } from '../../response/api-result';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
-  let jsonMock: jest.Mock;
-  let statusMock: jest.Mock;
+  let jsonMock: Mock;
+  let statusMock: Mock;
 
   beforeEach(() => {
     filter = new HttpExceptionFilter();
-    jsonMock = jest.fn();
-    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    jsonMock = vi.fn();
+    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
   });
 
   const buildHost = (url: string): ArgumentsHost =>
