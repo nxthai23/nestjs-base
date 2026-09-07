@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CachingInterface } from '@libs/ports/caching.interface';
+import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
 
 interface Entry {
   /** Serialized, so callers cannot mutate a cached value in place. */
   value: string;
   expiresAt: number;
 }
-
-/** Entries held before the least recently used one is dropped. */
-const DEFAULT_MAX_ENTRIES = 10_000;
 
 /**
  * In-process cache. The default driver: it needs no credentials, so the
@@ -33,10 +31,13 @@ export class MemoryService implements CachingInterface {
   private readonly maxEntries: number;
 
   constructor(config: ConfigService) {
-    this.defaultTtl = config.get<number>('caching.ttl', 60);
+    this.defaultTtl = config.get<number>(
+      'caching.ttl',
+      CACHING_DEFAULTS.ttlSeconds,
+    );
     this.maxEntries = config.get<number>(
       'caching.maxEntries',
-      DEFAULT_MAX_ENTRIES,
+      CACHING_DEFAULTS.maxEntries,
     );
   }
 

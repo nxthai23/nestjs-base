@@ -2,6 +2,7 @@ import { BeforeApplicationShutdown, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'memjs';
 import { CachingError, CachingInterface } from '@libs/ports/caching.interface';
+import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
 
 /** Any expiry above this is read by memcached as an absolute Unix timestamp. */
 const MAX_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -25,7 +26,10 @@ export class MemcachedService
   private readonly defaultTtl: number;
 
   constructor(config: ConfigService) {
-    this.defaultTtl = config.get<number>('caching.ttl', 60);
+    this.defaultTtl = config.get<number>(
+      'caching.ttl',
+      CACHING_DEFAULTS.ttlSeconds,
+    );
     this.client = Client.create(
       config.getOrThrow<string>('caching.memcached.servers'),
       {

@@ -3,6 +3,9 @@
  * @see https://docs.nestjs.com/techniques/configuration
  */
 
+import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
+import { STORAGE_DEFAULTS } from '@core/modules/storage/storage.constant';
+
 export default () => ({
   saltRound: parseInt(process.env.SALT_ROUND),
   local: process.env.LOCAL,
@@ -29,12 +32,13 @@ export default () => ({
   nodeEnv: process.env.NODE_ENV,
   caching: {
     // 'memory' | 'redis' | 'valkey' | 'memcached'
-    driver: process.env.CACHE_DRIVER || 'memory',
-    ttl: parseInt(process.env.CACHE_TTL) || 60, // seconds
+    driver: process.env.CACHE_DRIVER || CACHING_DEFAULTS.driver,
+    ttl: parseInt(process.env.CACHE_TTL) || CACHING_DEFAULTS.ttlSeconds,
     // prepended to every cache key; set it when a cache server is shared
-    keyPrefix: process.env.CACHE_KEY_PREFIX || '',
+    keyPrefix: process.env.CACHE_KEY_PREFIX || CACHING_DEFAULTS.keyPrefix,
     // memory driver only: entries held before the coldest is evicted
-    maxEntries: parseInt(process.env.CACHE_MAX_ENTRIES) || 10000,
+    maxEntries:
+      parseInt(process.env.CACHE_MAX_ENTRIES) || CACHING_DEFAULTS.maxEntries,
     redis: {
       url: process.env.REDIS_URL,
     },
@@ -49,7 +53,7 @@ export default () => ({
   },
   isEnableSeeder: parseInt(process.env.ENABLE_SEEDER) || 0,
   storage: {
-    driver: process.env.STORAGE_DRIVER || 's3', // 's3' or 'r2'
+    driver: process.env.STORAGE_DRIVER || STORAGE_DEFAULTS.driver, // 's3' or 'r2'
     s3: {
       bucket: process.env.S3_BUCKET,
       region: process.env.S3_REGION,

@@ -2,7 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CachingInterface } from '@libs/ports/caching.interface';
 import { CachingDriver, registry } from '@libs/registry';
-import { CACHING_ADAPTER } from './caching.constant';
+import { CACHING_ADAPTER, CACHING_DEFAULTS } from './caching.constant';
 import { CachingService } from './caching.service';
 
 @Module({})
@@ -21,7 +21,7 @@ export class CachingModule {
             // configuration at all.
             const driver = config.get<CachingDriver>(
               'caching.driver',
-              'memory',
+              CACHING_DEFAULTS.driver,
             );
             const Adapter = registry.caching[driver];
             if (!Adapter) {

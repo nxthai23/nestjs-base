@@ -4,7 +4,7 @@ import {
   CachingInterface,
   NamespacedCache,
 } from '@libs/ports/caching.interface';
-import { CACHING_ADAPTER } from './caching.constant';
+import { CACHING_ADAPTER, CACHING_DEFAULTS } from './caching.constant';
 
 /**
  * The caching entry point for the rest of the app.
@@ -36,7 +36,9 @@ export class CachingService implements CachingInterface {
     @Inject(CACHING_ADAPTER) private readonly adapter: CachingInterface,
     config: ConfigService,
   ) {
-    const configured = config.get<string>('caching.keyPrefix', '').trim();
+    const configured = config
+      .get<string>('caching.keyPrefix', CACHING_DEFAULTS.keyPrefix)
+      .trim();
     this.prefix = configured ? `${configured.replace(/:+$/, '')}:` : '';
   }
 

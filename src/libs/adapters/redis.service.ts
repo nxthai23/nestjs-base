@@ -2,6 +2,7 @@ import { BeforeApplicationShutdown, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { CachingError, CachingInterface } from '@libs/ports/caching.interface';
+import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
 
 export interface RedisOptions {
   url: string;
@@ -36,7 +37,7 @@ export class RedisService
   protected readOptions(config: ConfigService): RedisOptions {
     return {
       url: config.getOrThrow<string>('caching.redis.url'),
-      ttl: config.get<number>('caching.ttl', 60),
+      ttl: config.get<number>('caching.ttl', CACHING_DEFAULTS.ttlSeconds),
     };
   }
 

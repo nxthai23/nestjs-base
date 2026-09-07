@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisOptions, RedisService } from './redis.service';
+import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
 
 /**
  * Valkey is a fork of Redis 7.2 and speaks the same wire protocol, so it
@@ -15,7 +16,7 @@ export class ValkeyService extends RedisService {
   protected readOptions(config: ConfigService): RedisOptions {
     return {
       url: toRedisScheme(config.getOrThrow<string>('caching.valkey.url')),
-      ttl: config.get<number>('caching.ttl', 60),
+      ttl: config.get<number>('caching.ttl', CACHING_DEFAULTS.ttlSeconds),
     };
   }
 }
