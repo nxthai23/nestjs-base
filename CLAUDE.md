@@ -101,4 +101,5 @@ Copy `env.example` to `.env` (or use the existing `.env`). Key variables:
 - `ENABLE_SEEDER` — set to `1` to run seeders on startup
 - `CACHE_DRIVER` — `memory` (default), `redis`, `valkey` or `memcached`
 - `CACHE_TTL` — default cache entry lifetime, in **seconds** (default `60`)
+- `CACHE_MAX_ENTRIES` — memory driver only: entries held before the least recently used is evicted (default `10000`)
 - `REDIS_URL` — required only when `CACHE_DRIVER=redis`

@@ -5,6 +5,10 @@ function makeConfig(ttl = 60) {
   return new ConfigService({ caching: { ttl } });
 }
 
+function makeCappedConfig(maxEntries: number, ttl = 60) {
+  return new ConfigService({ caching: { ttl, maxEntries } });
+}
+
 describe('MemoryService', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -103,6 +107,56 @@ describe('MemoryService', () => {
     await cache.clear();
 
     await expect(cache.get('a')).resolves.toBeUndefined();
+    await expect(cache.get('b')).resolves.toBeUndefined();
+  });
+
+  // Lazy expiry alone leaves a key that is written and never read again
+  // sitting in the Map forever, and cache keys are routinely derived from user
+  // input - so without a cap this is a leak anyone can drive.
+  it('never grows past the configured cap', async () => {
+    const cache = new MemoryService(makeCappedConfig(3));
+
+    for (let i = 0; i < 100; i++) {
+      await cache.set(`k${i}`, i);
+    }
+
+    expect(cache.size).toBe(3);
+  });
+
+  it('drops the least recently used entry once the cap is reached', async () => {
+    const cache = new MemoryService(makeCappedConfig(2));
+    await cache.set('a', 1);
+    await cache.set('b', 2);
+
+    await cache.set('c', 3);
+
+    await expect(cache.get('a')).resolves.toBeUndefined();
+    await expect(cache.get('b')).resolves.toBe(2);
+    await expect(cache.get('c')).resolves.toBe(3);
+  });
+
+  it('spares a key that is still being read', async () => {
+    const cache = new MemoryService(makeCappedConfig(2));
+    await cache.set('a', 1);
+    await cache.set('b', 2);
+
+    // Touching 'a' should make 'b' the coldest entry instead.
+    await cache.get('a');
+    await cache.set('c', 3);
+
+    await expect(cache.get('a')).resolves.toBe(1);
+    await expect(cache.get('b')).resolves.toBeUndefined();
+  });
+
+  it('does not let rewriting a key age it out as if it were cold', async () => {
+    const cache = new MemoryService(makeCappedConfig(2));
+    await cache.set('a', 1);
+    await cache.set('b', 2);
+
+    await cache.set('a', 'refreshed');
+    await cache.set('c', 3);
+
+    await expect(cache.get('a')).resolves.toBe('refreshed');
     await expect(cache.get('b')).resolves.toBeUndefined();
   });
 

@@ -8,7 +8,13 @@ export interface CachingInterface {
   /** Resolves to undefined on a miss. */
   get<T>(key: string): Promise<T | undefined>;
 
-  /** Omit ttlSeconds to use the driver's configured default. */
+  /**
+   * Omit ttlSeconds to use the driver's configured default.
+   *
+   * `undefined` is not a storable value - `get` already uses it to mean
+   * "miss", so a cached undefined would be indistinguishable from absence.
+   * Setting it removes the key instead.
+   */
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
 
   delete(key: string): Promise<void>;

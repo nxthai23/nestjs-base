@@ -27,6 +27,15 @@ export class CachingService implements CachingInterface {
   }
 
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    // `undefined` cannot survive the round trip: JSON.stringify returns the
+    // value undefined rather than a string, which leaves the memory driver
+    // holding a non-string it later fails to parse. It is unreadable anyway,
+    // since `get` spends undefined on "miss" - so removing the key is the only
+    // reading of set(key, undefined) that stays consistent with the port.
+    if (value === undefined) {
+      return this.delete(key);
+    }
+
     return this.degrade(
       'set',
       key,

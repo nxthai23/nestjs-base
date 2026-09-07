@@ -41,6 +41,31 @@ describe('CachingService', () => {
     vi.restoreAllMocks();
   });
 
+  // `undefined` cannot round-trip: JSON.stringify hands back the value
+  // undefined rather than a string, and `get` already spends undefined on
+  // "miss", so a cached undefined would be unreadable even if it stored.
+  describe('undefined values', () => {
+    it('removes the key instead of storing an unreadable value', async () => {
+      const adapter = makeFakeAdapter();
+      const caching = await build(adapter);
+
+      await caching.set('k', undefined);
+
+      expect(adapter.set).not.toHaveBeenCalled();
+      expect(adapter.delete).toHaveBeenCalledWith('k');
+    });
+
+    it('still stores null, which round-trips fine', async () => {
+      const adapter = makeFakeAdapter();
+      const caching = await build(adapter);
+
+      await caching.set('k', null);
+
+      expect(adapter.set).toHaveBeenCalledWith('k', null, undefined);
+      expect(adapter.delete).not.toHaveBeenCalled();
+    });
+  });
+
   describe('delegation', () => {
     it('passes reads to whichever adapter is wired in', async () => {
       const adapter = makeFakeAdapter();
