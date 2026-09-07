@@ -30,7 +30,7 @@ export class S3Service implements StorageInterface {
   protected readonly bucket: string;
   private readonly region: string;
   private readonly endpoint?: string;
-  private readonly publicBaseUrl?: string;
+  protected readonly publicBaseUrl?: string;
 
   constructor(config: ConfigService) {
     const options = this.readOptions(config);

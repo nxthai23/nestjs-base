@@ -168,10 +168,21 @@ and inherits nothing from `S3Service`.
 
 `getPublicUrl(key)` returns `<publicBaseUrl>/<key>` when `*_PUBLIC_BASE_URL` is
 configured (the normal case — a CDN or custom domain in front of the bucket).
-When it is not configured it falls back to the provider's default object URL:
-`https://<bucket>.s3.<region>.amazonaws.com/<key>` for S3, and the account
-endpoint form for R2. Objects still have to be publicly readable for that URL
-to resolve — for private buckets, callers use `getSignedUrl` instead.
+Behaviour without it differs by provider, and this is the first place the two
+adapters genuinely diverge:
+
+- **S3** falls back to `https://<bucket>.s3.<region>.amazonaws.com/<key>`. That
+  is a real address; it resolves as long as the object is publicly readable.
+- **R2 throws.** Cloudflare buckets are
+  [never public by default](https://developers.cloudflare.com/r2/buckets/public-buckets/),
+  and the `<account_id>.r2.cloudflarestorage.com` endpoint is the S3 API, which
+  requires SigV4 — handing it out as a public link would produce a URL that
+  always 401s. Public R2 access requires a connected custom domain or the
+  bucket's managed `pub-<hash>.r2.dev` development URL, so `R2_PUBLIC_BASE_URL`
+  must be set before `getPublicUrl` can be used.
+
+For private objects on either provider, callers use `getSignedUrl` instead and
+never need a public base URL.
 
 ### `src/libs/registry.ts`
 

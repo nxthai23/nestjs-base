@@ -35,11 +35,23 @@ describe('R2Service', () => {
     expect(config.forcePathStyle).toBe(true);
   });
 
-  it('falls back to the R2 bucket URL for public links when no CDN base is set', () => {
-    const r2 = new R2Service(makeConfig());
+  it('serves public links from the configured custom domain', () => {
+    const r2 = new R2Service(
+      makeConfig({ publicBaseUrl: 'https://media.example.com' }),
+    );
 
     expect(r2.getPublicUrl('avatars/user-1.png')).toBe(
-      'https://abc123.r2.cloudflarestorage.com/media/avatars/user-1.png',
+      'https://media.example.com/avatars/user-1.png',
+    );
+  });
+
+  it('refuses to hand out an S3 API URL as a public link', () => {
+    // R2 buckets are private by default: the S3 API endpoint needs SigV4 auth,
+    // so returning it would produce a link that always 401s.
+    const r2 = new R2Service(makeConfig());
+
+    expect(() => r2.getPublicUrl('avatars/user-1.png')).toThrow(
+      /R2_PUBLIC_BASE_URL/,
     );
   });
 

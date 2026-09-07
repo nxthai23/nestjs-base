@@ -159,9 +159,16 @@ Pick a provider with one env var — no code changes:
 STORAGE_DRIVER=s3          # or r2
 ```
 
-then fill in the matching `S3_*` / `R2_*` values from `env.example`. Set
-`*_PUBLIC_BASE_URL` if a CDN or custom domain fronts the bucket; otherwise
-public URLs fall back to the provider's own bucket host.
+then fill in the matching `S3_*` / `R2_*` values from `env.example`.
+
+`*_PUBLIC_BASE_URL` is the CDN or custom domain in front of the bucket, used by
+`getPublicUrl()`. On S3 it is optional — without it, URLs fall back to
+`https://<bucket>.s3.<region>.amazonaws.com/<key>`. **On R2 it is required for
+public links:** R2 buckets are private by default and the
+`*.r2.cloudflarestorage.com` endpoint is the authenticated S3 API, not a public
+host, so `getPublicUrl()` throws until you point `R2_PUBLIC_BASE_URL` at a
+connected custom domain or the bucket's `pub-<hash>.r2.dev` URL. Private objects
+need none of this — use `getSignedUrl()`.
 
 Register the module once (it is global), then inject `StorageService`:
 
