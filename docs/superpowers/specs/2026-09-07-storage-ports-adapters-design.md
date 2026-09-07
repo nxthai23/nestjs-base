@@ -45,9 +45,8 @@ src/libs/
   ports/
     storage.interface.ts        # StorageInterface, PutObjectInput, StorageError
   adapters/
-    s3-compatible.base.ts       # abstract base — holds the AWS SDK v3 calls
-    s3.service.ts               # S3Service extends S3CompatibleBase
-    r2.service.ts               # R2Service extends S3CompatibleBase
+    s3.service.ts               # S3Service — holds the AWS SDK v3 calls
+    r2.service.ts               # R2Service extends S3Service (endpoint only)
     __tests__/
       s3.service.spec.ts
       r2.service.spec.ts
@@ -115,14 +114,14 @@ generation. Reading bytes back (`getObject`) and prefix listing
 (`listObjects`) are not included; neither has a caller yet, and both can be
 added to the port later when one appears.
 
-### `src/libs/adapters/s3-compatible.base.ts`
+### `src/libs/adapters/s3.service.ts`
 
-An abstract class holding every `@aws-sdk/client-s3` call. Cloudflare R2 speaks
-the S3 API, so both adapters share this implementation and differ only in the
-client configuration they pass up.
+`S3Service` holds every `@aws-sdk/client-s3` call and implements
+`StorageInterface` directly. Its constructor builds the client from options
+returned by an overridable `readOptions(config)`:
 
 ```ts
-export interface S3CompatibleConfig {
+export interface S3Options {
   bucket: string;
   region: string;
   accessKeyId: string;
@@ -132,38 +131,40 @@ export interface S3CompatibleConfig {
   publicBaseUrl?: string;  // CDN / public bucket origin for getPublicUrl
 }
 
-export abstract class S3CompatibleBase implements StorageInterface {
-  protected readonly client: S3Client;
-  protected readonly bucket: string;
-  // implements putObject / deleteObject / exists / getPublicUrl / getSignedUrl
-  // via PutObjectCommand, DeleteObjectCommand, HeadObjectCommand and
-  // @aws-sdk/s3-request-presigner
+@Injectable()
+export class S3Service implements StorageInterface {
+  constructor(config: ConfigService) { /* builds S3Client from readOptions */ }
+
+  /** Overridden by S3-compatible providers that read different env vars. */
+  protected readOptions(config: ConfigService): S3Options { /* storage.s3.* */ }
 }
 ```
+
+It reads `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
+and optional `S3_PUBLIC_BASE_URL`, with no custom endpoint.
 
 Every SDK call is wrapped in try/catch and rethrown as `StorageError` so that
 provider-specific error shapes (`S3ServiceException`, R2 quirks) never reach
 callers. `exists()` is the one exception: a `NotFound` / `404` is a normal
 `false` return, not an error.
 
-### `src/libs/adapters/s3.service.ts` and `r2.service.ts`
+Required config is read with `getOrThrow`, so a misconfigured deployment fails
+at application boot rather than on the first upload.
 
-Thin subclasses. Each reads its own env config and calls `super()`:
+### `src/libs/adapters/r2.service.ts`
 
-- `S3Service` — `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`,
-  `S3_SECRET_ACCESS_KEY`, optional `S3_PUBLIC_BASE_URL`. No custom endpoint.
-- `R2Service` — `R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-  `R2_SECRET_ACCESS_KEY`, optional `R2_PUBLIC_BASE_URL`. Sets
-  `endpoint: https://<account_id>.r2.cloudflarestorage.com`,
-  `region: 'auto'`, `forcePathStyle: true`.
+Cloudflare R2 implements the S3 API, so `R2Service extends S3Service` and
+overrides only `readOptions` — reading `R2_BUCKET`, `R2_ACCOUNT_ID`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and optional `R2_PUBLIC_BASE_URL`,
+and setting `endpoint: https://<account_id>.r2.cloudflarestorage.com`,
+`region: 'auto'`, `forcePathStyle: true`.
 
-They are kept as two separate files rather than one class with two configs so
-each has a place to diverge when provider behaviour differs (multipart
-thresholds, storage classes, server-side encryption options).
-
-Each constructor validates that its required config values are present and
-throws if any are missing, so a misconfigured deployment fails at application
-boot rather than on the first upload.
+An earlier draft of this spec put the shared implementation in a third
+`s3-compatible.base.ts` abstract class with two thin subclasses. That was
+dropped: it split one implementation across three files, two of which contained
+no behaviour at all. A provider that is *not* S3-compatible (local disk, GCS,
+Azure Blob) implements `StorageInterface` directly as its own sibling adapter
+and inherits nothing from `S3Service`.
 
 `getPublicUrl(key)` returns `<publicBaseUrl>/<key>` when `*_PUBLIC_BASE_URL` is
 configured (the normal case — a CDN or custom domain in front of the bucket).
@@ -451,11 +452,10 @@ with an override lifting the rule for `src/libs/registry.ts` itself.
 
 1. Add `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`.
 2. `src/libs/ports/storage.interface.ts`.
-3. `src/libs/adapters/s3-compatible.base.ts`.
-4. `src/libs/adapters/s3.service.ts`, `src/libs/adapters/r2.service.ts`.
-5. `src/libs/registry.ts`.
-6. `src/core/modules/storage/` — constant, service, module.
-7. `configuration.ts` + `env.example`.
-8. Adapter, service and module specs.
-9. ESLint restricted-import rule.
-10. `CLAUDE.md` + `README.md`.
+3. `src/libs/adapters/s3.service.ts`, `src/libs/adapters/r2.service.ts`.
+4. `src/libs/registry.ts`.
+5. `src/core/modules/storage/` — constant, service, module.
+6. `configuration.ts` + `env.example`.
+7. Adapter, service and module specs.
+8. ESLint restricted-import rule.
+9. `CLAUDE.md` + `README.md`.

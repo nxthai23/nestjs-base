@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3CompatibleBase } from './s3-compatible.base';
+import { S3Options, S3Service } from './s3.service';
 
+/**
+ * Cloudflare R2 speaks the S3 API, so it reuses the S3 implementation and
+ * only points it at the account endpoint.
+ */
 @Injectable()
-export class R2Service extends S3CompatibleBase {
-  constructor(config: ConfigService) {
+export class R2Service extends S3Service {
+  protected readOptions(config: ConfigService): S3Options {
     const accountId = config.getOrThrow<string>('storage.r2.accountId');
 
-    super({
+    return {
       bucket: config.getOrThrow<string>('storage.r2.bucket'),
       accessKeyId: config.getOrThrow<string>('storage.r2.accessKeyId'),
       secretAccessKey: config.getOrThrow<string>('storage.r2.secretAccessKey'),
@@ -15,6 +19,6 @@ export class R2Service extends S3CompatibleBase {
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       region: 'auto',
       forcePathStyle: true,
-    });
+    };
   }
 }
