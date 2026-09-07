@@ -5,7 +5,7 @@ import { CaslAbilityFactory } from '@core/casl/casl-ability.factory';
 
 describe('PoliciesGuard', () => {
   const mockUser = { id: 'user-1' };
-  const mockAbility = { can: jest.fn() };
+  const mockAbility = { can: vi.fn() };
 
   function makeContext() {
     return {
@@ -18,13 +18,13 @@ describe('PoliciesGuard', () => {
 
   function makeReflector(returnValue: any) {
     return {
-      get: jest.fn().mockReturnValue(returnValue),
+      get: vi.fn().mockReturnValue(returnValue),
     } as unknown as Reflector;
   }
 
   function makeFactory() {
     return {
-      createForUser: jest.fn().mockReturnValue(mockAbility),
+      createForUser: vi.fn().mockReturnValue(mockAbility),
     } as unknown as CaslAbilityFactory;
   }
 

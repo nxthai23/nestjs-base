@@ -61,11 +61,18 @@ export class ApiResult<T = unknown> {
     });
   }
 
-  static error(
+  static error<T = null>(
     message: string,
     statusCode: number,
     path: string,
-  ): ApiResult<null> {
-    return new ApiResult<null>({ success: false, statusCode, message, path });
+    data?: T,
+  ): ApiResult<T | null> {
+    return new ApiResult<T | null>({
+      success: false,
+      statusCode,
+      message,
+      path,
+      data,
+    });
   }
 }

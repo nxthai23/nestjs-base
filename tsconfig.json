@@ -20,12 +20,13 @@
       "@/*": ["*"]
     },
     "ignoreDeprecations": "6.0",
-    "types": ["node", "jest"],
+    "types": ["node", "vitest/globals"],
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "exclude": ["node_modules", "dist", "coverage", "vitest.config*.mts"]
 }

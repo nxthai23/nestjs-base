@@ -1,7 +1,20 @@
-jest.mock('@mikro-orm/nestjs');
-jest.mock('@mikro-orm/core');
-jest.mock('@mikro-orm/decorators/legacy');
-jest.mock('@mikro-orm/mongodb');
+// vi.mock() is hoisted above imports, so the shared factories are loaded via
+// dynamic import inside each callback instead of referenced directly (which
+// would hit a TDZ error since a static import wouldn't have run yet).
+vi.mock('@mikro-orm/nestjs', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) => m.mikroOrmNestjsMock()),
+);
+vi.mock('@mikro-orm/core', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) => m.mikroOrmCoreMock()),
+);
+vi.mock('@mikro-orm/decorators/legacy', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) =>
+    m.mikroOrmDecoratorsLegacyMock(),
+  ),
+);
+vi.mock('@mikro-orm/mongodb', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) => m.mikroOrmMongodbMock()),
+);
 
 import { InternalServerErrorException } from '@nestjs/common';
 import { UserService } from '../user.service';
@@ -12,10 +25,10 @@ describe('UserService.createWithDefaultRole', () => {
     const repository = {
       getEntityName: () => 'User',
       getEntityManager: () => ({
-        persist: jest.fn(),
-        flush: jest.fn().mockResolvedValue(undefined),
+        persist: vi.fn(),
+        flush: vi.fn().mockResolvedValue(undefined),
       }),
-      create: jest.fn((dto: any) => dto),
+      create: vi.fn((dto: any) => dto),
     } as any;
     return new UserService(repository, roleService as RoleService);
   }
@@ -23,7 +36,7 @@ describe('UserService.createWithDefaultRole', () => {
   it('attaches the default "user" role when creating an account', async () => {
     const defaultRole = { id: 'role-user', name: 'user' };
     const roleService = {
-      findByName: jest.fn().mockResolvedValue(defaultRole),
+      findByName: vi.fn().mockResolvedValue(defaultRole),
     };
     const service = makeUserService(roleService);
 
@@ -38,7 +51,7 @@ describe('UserService.createWithDefaultRole', () => {
   });
 
   it('throws when the default "user" role has not been seeded', async () => {
-    const roleService = { findByName: jest.fn().mockResolvedValue(null) };
+    const roleService = { findByName: vi.fn().mockResolvedValue(null) };
     const service = makeUserService(roleService);
 
     await expect(

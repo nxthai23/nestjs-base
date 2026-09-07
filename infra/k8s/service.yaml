@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nestjs-base
+  namespace: nestjs-base
+spec:
+  # NodePort (not ClusterIP) so the app is reachable from the host without
+  # running `kubectl port-forward` by hand — see infra/docs/k8s/README.md for the
+  # matching `minikube start --ports=...` setup this depends on.
+  type: NodePort
+  selector:
+    app: nestjs-base
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080

@@ -1,6 +1,6 @@
 services:
   nestjs:
-    image: node:24.19.0
+    image: nestjs-base:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,4 +27,3 @@ services:
 
 volumes:
   data:
-  node_modules:

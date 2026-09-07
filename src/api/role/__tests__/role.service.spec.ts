@@ -1,43 +1,30 @@
-// `@mikro-orm/nestjs` ships as an ESM-only package (no CJS build) that Jest's
-// CommonJS-based module runtime cannot `require()` directly. This test never
-// goes through Nest's DI container (the service is constructed manually
-// below), so `@InjectRepository` never needs to run for real — mocking it
-// out avoids loading the real ESM package while testing genuine service
-// behavior.
-jest.mock('@mikro-orm/nestjs', () => ({
-  InjectRepository: () => () => undefined,
-}));
-// `emitDecoratorMetadata` forces TS to keep several of these imports alive
-// at runtime (referenced in `design:paramtypes`/`design:type` metadata),
-// even where they're only ever used as types in the source files — so
-// they also need mocks for the same ESM-in-Jest reason as above. This
-// covers the transitive imports pulled in by role.service.ts ->
-// entities/role.entity.ts -> entities/permission.entity.ts ->
-// @core/base/base.entity.ts.
-jest.mock('@mikro-orm/core', () => ({
-  EntityRepository: class {},
-  BaseEntity: class {},
-  Collection: class {},
-}));
-jest.mock('@mikro-orm/decorators/legacy', () => {
-  const noopDecorator = () => () => undefined;
-  return {
-    Entity: noopDecorator,
-    PrimaryKey: noopDecorator,
-    Property: noopDecorator,
-    SerializedPrimaryKey: noopDecorator,
-    OneToMany: noopDecorator,
-    ManyToOne: noopDecorator,
-  };
-});
-jest.mock('@mikro-orm/mongodb', () => ({
-  ObjectId: class {},
-}));
+// This test never goes through Nest's DI container (the service is
+// constructed manually below), and role.service.ts -> entities/role.entity.ts
+// -> entities/permission.entity.ts -> @core/base/base.entity.ts transitively
+// pulls in the rest - see mikro-orm.mock.ts for why these need to be mocked.
+// vi.mock() is hoisted above imports, so the shared factories are loaded via
+// dynamic import inside each callback instead of referenced directly (which
+// would hit a TDZ error since a static import wouldn't have run yet).
+vi.mock('@mikro-orm/nestjs', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) => m.mikroOrmNestjsMock()),
+);
+vi.mock('@mikro-orm/core', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) => m.mikroOrmCoreMock()),
+);
+vi.mock('@mikro-orm/decorators/legacy', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) =>
+    m.mikroOrmDecoratorsLegacyMock(),
+  ),
+);
+vi.mock('@mikro-orm/mongodb', () =>
+  import('@libs/__test__/mikro-orm.mock').then((m) => m.mikroOrmMongodbMock()),
+);
 
+import type { Mock } from 'vitest';
 import { RoleService } from '../role.service';
 
 describe('RoleService', () => {
-  function makeService(findOne: jest.Mock) {
+  function makeService(findOne: Mock) {
     const repository = {
       findOne,
       getEntityName: () => 'Role',
@@ -47,9 +34,7 @@ describe('RoleService', () => {
   }
 
   it('findByName looks up a role by its name field', async () => {
-    const findOne = jest
-      .fn()
-      .mockResolvedValue({ id: 'role-1', name: 'admin' });
+    const findOne = vi.fn().mockResolvedValue({ id: 'role-1', name: 'admin' });
     const service = makeService(findOne);
 
     const result = await service.findByName('admin');
@@ -59,7 +44,7 @@ describe('RoleService', () => {
   });
 
   it('returns null when no role matches', async () => {
-    const findOne = jest.fn().mockResolvedValue(null);
+    const findOne = vi.fn().mockResolvedValue(null);
     const service = makeService(findOne);
 
     const result = await service.findByName('nonexistent');

@@ -1,6 +1,7 @@
 # compiled output
 /dist
 /node_modules
+node_modules/
 *.tsbuildinfo
 
 # Claude Code local config
@@ -14,6 +15,9 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+
+# k8s local secrets
+infra/k8s/secret.yaml
 
 # OS
 .DS_Store
