@@ -14,7 +14,6 @@ export interface StorageInterface {
   putObject(input: PutObjectInput): Promise<{ key: string }>;
   deleteObject(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
-  getPublicUrl(key: string): string;
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
 }
 

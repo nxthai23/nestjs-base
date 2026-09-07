@@ -21,24 +21,17 @@ export interface S3Options {
   secretAccessKey: string;
   endpoint?: string;
   forcePathStyle?: boolean;
-  publicBaseUrl?: string;
 }
 
 @Injectable()
 export class S3Service implements StorageInterface {
   protected readonly client: S3Client;
   protected readonly bucket: string;
-  private readonly region: string;
-  private readonly endpoint?: string;
-  protected readonly publicBaseUrl?: string;
 
   constructor(config: ConfigService) {
     const options = this.readOptions(config);
 
     this.bucket = options.bucket;
-    this.region = options.region;
-    this.endpoint = options.endpoint;
-    this.publicBaseUrl = options.publicBaseUrl;
     this.client = new S3Client({
       region: options.region,
       endpoint: options.endpoint,
@@ -57,7 +50,6 @@ export class S3Service implements StorageInterface {
       region: config.getOrThrow<string>('storage.s3.region'),
       accessKeyId: config.getOrThrow<string>('storage.s3.accessKeyId'),
       secretAccessKey: config.getOrThrow<string>('storage.s3.secretAccessKey'),
-      publicBaseUrl: config.get<string>('storage.s3.publicBaseUrl'),
     };
   }
 
@@ -95,11 +87,6 @@ export class S3Service implements StorageInterface {
     }
   }
 
-  getPublicUrl(key: string): string {
-    const encodedKey = key.split('/').map(encodeURIComponent).join('/');
-    return `${this.publicOrigin()}/${encodedKey}`;
-  }
-
   async getSignedUrl(key: string, expiresInSeconds = 900): Promise<string> {
     return this.execute('getSignedUrl', key, () =>
       presign(
@@ -108,17 +95,6 @@ export class S3Service implements StorageInterface {
         { expiresIn: expiresInSeconds },
       ),
     );
-  }
-
-  /**
-   * Where publicly-readable objects are served from: a CDN or custom domain
-   * when configured, otherwise the provider's own bucket host.
-   */
-  private publicOrigin(): string {
-    if (this.publicBaseUrl) return this.publicBaseUrl.replace(/\/+$/, '');
-    if (this.endpoint)
-      return `${this.endpoint.replace(/\/+$/, '')}/${this.bucket}`;
-    return `https://${this.bucket}.s3.${this.region}.amazonaws.com`;
   }
 
   private async execute<T>(

@@ -93,7 +93,6 @@ export interface StorageInterface {
   putObject(input: PutObjectInput): Promise<{ key: string }>;
   deleteObject(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
-  getPublicUrl(key: string): string;
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
 }
 
@@ -128,7 +127,6 @@ export interface S3Options {
   secretAccessKey: string;
   endpoint?: string;       // R2 sets this; plain S3 leaves it undefined
   forcePathStyle?: boolean;
-  publicBaseUrl?: string;  // CDN / public bucket origin for getPublicUrl
 }
 
 @Injectable()
@@ -140,8 +138,8 @@ export class S3Service implements StorageInterface {
 }
 ```
 
-It reads `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
-and optional `S3_PUBLIC_BASE_URL`, with no custom endpoint.
+It reads `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID` and
+`S3_SECRET_ACCESS_KEY`, with no custom endpoint.
 
 Every SDK call is wrapped in try/catch and rethrown as `StorageError` so that
 provider-specific error shapes (`S3ServiceException`, R2 quirks) never reach
@@ -155,9 +153,9 @@ at application boot rather than on the first upload.
 
 Cloudflare R2 implements the S3 API, so `R2Service extends S3Service` and
 overrides only `readOptions` — reading `R2_BUCKET`, `R2_ACCOUNT_ID`,
-`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and optional `R2_PUBLIC_BASE_URL`,
-and setting `endpoint: https://<account_id>.r2.cloudflarestorage.com`,
-`region: 'auto'`, `forcePathStyle: true`.
+`R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, and setting
+`endpoint: https://<account_id>.r2.cloudflarestorage.com`, `region: 'auto'`,
+`forcePathStyle: true`.
 
 An earlier draft of this spec put the shared implementation in a third
 `s3-compatible.base.ts` abstract class with two thin subclasses. That was
@@ -166,23 +164,34 @@ no behaviour at all. A provider that is *not* S3-compatible (local disk, GCS,
 Azure Blob) implements `StorageInterface` directly as its own sibling adapter
 and inherits nothing from `S3Service`.
 
-`getPublicUrl(key)` returns `<publicBaseUrl>/<key>` when `*_PUBLIC_BASE_URL` is
-configured (the normal case — a CDN or custom domain in front of the bucket).
-Behaviour without it differs by provider, and this is the first place the two
-adapters genuinely diverge:
+## Access flow: keys in the database, URLs on demand
 
-- **S3** falls back to `https://<bucket>.s3.<region>.amazonaws.com/<key>`. That
-  is a real address; it resolves as long as the object is publicly readable.
-- **R2 throws.** Cloudflare buckets are
-  [never public by default](https://developers.cloudflare.com/r2/buckets/public-buckets/),
-  and the `<account_id>.r2.cloudflarestorage.com` endpoint is the S3 API, which
-  requires SigV4 — handing it out as a public link would produce a URL that
-  always 401s. Public R2 access requires a connected custom domain or the
-  bucket's managed `pub-<hash>.r2.dev` development URL, so `R2_PUBLIC_BASE_URL`
-  must be set before `getPublicUrl` can be used.
+The key is the only thing that gets persisted. Links are generated per request
+and expire.
 
-For private objects on either provider, callers use `getSignedUrl` instead and
-never need a public base URL.
+```
+upload   putObject({ key, body, contentType })  →  { key }  →  saved on the entity
+read     getSignedUrl(key)                      →  presigned URL, 15 min default
+```
+
+Callers choose their own keys (`avatars/<userId>.png`), so re-uploading the same
+key overwrites in place rather than accumulating orphaned objects, and the key
+stays derivable from domain data.
+
+A `getPublicUrl(key)` method was specified and built earlier, returning a
+permanent CDN/bucket URL from `*_PUBLIC_BASE_URL`. It was removed along with
+that config: every read path here is presigned, so it had no caller. Two
+consequences worth knowing before re-adding it:
+
+- Presigned URLs are unique per request, so they defeat CDN caching. Serving
+  hot public assets (avatars, product images) at scale is the case that would
+  justify bringing it back.
+- It cannot be implemented uniformly. S3 has a usable default bucket host, but
+  Cloudflare buckets are
+  [never public by default](https://developers.cloudflare.com/r2/buckets/public-buckets/)
+  and `<account_id>.r2.cloudflarestorage.com` is the authenticated S3 API, not
+  a public host — so R2 would require a connected custom domain or the managed
+  `pub-<hash>.r2.dev` URL, and must fail loudly without one.
 
 ### `src/libs/registry.ts`
 
@@ -285,7 +294,6 @@ export class StorageService implements StorageInterface {
   putObject(input: PutObjectInput) { return this.adapter.putObject(input); }
   deleteObject(key: string) { return this.adapter.deleteObject(key); }
   exists(key: string) { return this.adapter.exists(key); }
-  getPublicUrl(key: string) { return this.adapter.getPublicUrl(key); }
   getSignedUrl(key: string, ttl?: number) {
     return this.adapter.getSignedUrl(key, ttl);
   }
@@ -313,14 +321,12 @@ storage: {
     region: process.env.S3_REGION,
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    publicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
   },
   r2: {
     bucket: process.env.R2_BUCKET,
     accountId: process.env.R2_ACCOUNT_ID,
     accessKeyId: process.env.R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
   },
 },
 ```
@@ -335,13 +341,11 @@ S3_BUCKET=xxx
 S3_REGION=ap-southeast-1
 S3_ACCESS_KEY_ID=xxx
 S3_SECRET_ACCESS_KEY=xxx
-S3_PUBLIC_BASE_URL=
 
 R2_BUCKET=xxx
 R2_ACCOUNT_ID=xxx
 R2_ACCESS_KEY_ID=xxx
 R2_SECRET_ACCESS_KEY=xxx
-R2_PUBLIC_BASE_URL=
 ```
 
 ### New dependencies

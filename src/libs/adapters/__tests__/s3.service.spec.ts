@@ -107,34 +107,6 @@ describe('S3Service', () => {
     });
   });
 
-  it('builds public URLs from the configured CDN base when one is set', () => {
-    const s3 = new S3Service(
-      makeConfig({ publicBaseUrl: 'https://cdn.example.com' }),
-    );
-
-    expect(s3.getPublicUrl('avatars/user-1.png')).toBe(
-      'https://cdn.example.com/avatars/user-1.png',
-    );
-  });
-
-  it('falls back to the default bucket host when no CDN base is configured', () => {
-    const s3 = new S3Service(makeConfig());
-
-    expect(s3.getPublicUrl('avatars/user-1.png')).toBe(
-      'https://my-bucket.s3.ap-southeast-1.amazonaws.com/avatars/user-1.png',
-    );
-  });
-
-  it('escapes characters in the key that would break the URL', () => {
-    const s3 = new S3Service(
-      makeConfig({ publicBaseUrl: 'https://cdn.example.com' }),
-    );
-
-    expect(s3.getPublicUrl('reports/q3 summary.pdf')).toBe(
-      'https://cdn.example.com/reports/q3%20summary.pdf',
-    );
-  });
-
   it('signs a time-limited URL for private objects', async () => {
     const s3 = new S3Service(makeConfig());
 

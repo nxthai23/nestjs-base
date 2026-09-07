@@ -8,7 +8,6 @@ function makeFakeAdapter(): StorageInterface {
     putObject: vi.fn().mockResolvedValue({ key: 'k' }),
     deleteObject: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue(true),
-    getPublicUrl: vi.fn().mockReturnValue('https://cdn.example.com/k'),
     getSignedUrl: vi.fn().mockResolvedValue('https://signed.example.com/k'),
   };
 }
@@ -55,11 +54,10 @@ describe('StorageService', () => {
     expect(adapter.exists).toHaveBeenCalledWith('k');
   });
 
-  it('passes URL generation to the adapter, forwarding the expiry', async () => {
+  it('passes signed-URL generation to the adapter, forwarding the expiry', async () => {
     const adapter = makeFakeAdapter();
     const storage = await build(adapter);
 
-    expect(storage.getPublicUrl('k')).toBe('https://cdn.example.com/k');
     await expect(storage.getSignedUrl('k', 60)).resolves.toBe(
       'https://signed.example.com/k',
     );

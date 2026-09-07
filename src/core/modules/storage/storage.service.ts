@@ -28,10 +28,6 @@ export class StorageService implements StorageInterface {
     return this.adapter.exists(key);
   }
 
-  getPublicUrl(key: string): string {
-    return this.adapter.getPublicUrl(key);
-  }
-
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string> {
     return this.adapter.getSignedUrl(key, expiresInSeconds);
   }

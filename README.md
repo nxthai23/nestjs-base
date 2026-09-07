@@ -161,21 +161,15 @@ STORAGE_DRIVER=s3          # or r2
 
 then fill in the matching `S3_*` / `R2_*` values from `env.example`.
 
-`*_PUBLIC_BASE_URL` is the CDN or custom domain in front of the bucket, used by
-`getPublicUrl()`. On S3 it is optional — without it, URLs fall back to
-`https://<bucket>.s3.<region>.amazonaws.com/<key>`. **On R2 it is required for
-public links:** R2 buckets are private by default and the
-`*.r2.cloudflarestorage.com` endpoint is the authenticated S3 API, not a public
-host, so `getPublicUrl()` throws until you point `R2_PUBLIC_BASE_URL` at a
-connected custom domain or the bucket's `pub-<hash>.r2.dev` URL. Private objects
-need none of this — use `getSignedUrl()`.
-
 Register the module once (it is global), then inject `StorageService`:
 
 ```typescript
 // app.module.ts
 imports: [StorageModule.forRootAsync()],
 ```
+
+**The flow: store the key, not the URL.** Upload returns the object key, which
+is what goes in the database; links are generated on read and expire.
 
 ```typescript
 import { StorageService } from '@core/modules/storage/storage.service';
@@ -190,10 +184,20 @@ export class AvatarService {
       body: file.buffer,
       contentType: file.mimetype,
     });
-    return this.storage.getPublicUrl(key);
+    await this.userService.update(userId, { avatarKey: key });
+    return key;
+  }
+
+  async getAvatarUrl(user: User) {
+    // presigned, valid 15 minutes by default
+    return this.storage.getSignedUrl(user.avatarKey);
   }
 }
 ```
+
+Keys are chosen by the caller, so re-uploading the same key overwrites in place
+instead of leaving orphaned objects. URLs are never persisted: they are signed
+per request, so they keep working after a bucket, domain or provider change.
 
 Use `getSignedUrl(key, expiresInSeconds)` for private objects. Adapter failures
 arrive as `StorageError` (carrying `operation`, `key` and the original `cause`),

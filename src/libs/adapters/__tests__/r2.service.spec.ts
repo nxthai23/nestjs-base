@@ -35,24 +35,13 @@ describe('R2Service', () => {
     expect(config.forcePathStyle).toBe(true);
   });
 
-  it('serves public links from the configured custom domain', () => {
-    const r2 = new R2Service(
-      makeConfig({ publicBaseUrl: 'https://media.example.com' }),
-    );
-
-    expect(r2.getPublicUrl('avatars/user-1.png')).toBe(
-      'https://media.example.com/avatars/user-1.png',
-    );
-  });
-
-  it('refuses to hand out an S3 API URL as a public link', () => {
-    // R2 buckets are private by default: the S3 API endpoint needs SigV4 auth,
-    // so returning it would produce a link that always 401s.
+  it('signs URLs against the R2 endpoint, not AWS', async () => {
     const r2 = new R2Service(makeConfig());
 
-    expect(() => r2.getPublicUrl('avatars/user-1.png')).toThrow(
-      /R2_PUBLIC_BASE_URL/,
-    );
+    const url = await r2.getSignedUrl('private/contract.pdf');
+
+    expect(url).toContain('abc123.r2.cloudflarestorage.com');
+    expect(url).toContain('X-Amz-Signature=');
   });
 
   it('uploads through the same S3-compatible implementation as the S3 adapter', async () => {
