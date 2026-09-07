@@ -33,6 +33,30 @@ async function build() {
   };
 }
 
+function messageWith(nonce: string): string {
+  return new SiweMessage({
+    domain: 'example.com',
+    address: WALLET,
+    uri: 'https://example.com',
+    version: '1',
+    chainId: 1,
+    nonce,
+  }).prepareMessage();
+}
+
+/**
+ * Replaces the on-chain signature check. The point of these tests is what
+ * SiweService does around that call, not viem's cryptography — and a real
+ * check would need a live RPC endpoint.
+ */
+function stubSignatureCheck(siwe: SiweService, valid: boolean) {
+  const verifySiweMessage = vi.fn().mockResolvedValue(valid);
+  (siwe as unknown as { publicClient: unknown }).publicClient = {
+    verifySiweMessage,
+  };
+  return verifySiweMessage;
+}
+
 describe('SiweService', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -47,17 +71,29 @@ describe('SiweService', () => {
     await expect(caching.get<string>(WALLET)).resolves.toBe(nonce);
   });
 
+  // A nonce is single-use. Handing back an outstanding one would keep a
+  // captured signature replayable for the rest of its ttl.
+  it('issues a fresh nonce on every call and stores the latest', async () => {
+    const { siwe, caching } = await build();
+
+    const first = await siwe.getNonce(WALLET);
+    const second = await siwe.getNonce(WALLET);
+
+    expect(second).not.toBe(first);
+    await expect(caching.get<string>(WALLET)).resolves.toBe(second);
+  });
+
   // The nonce previously used cache-manager, whose ttl is in milliseconds, so
   // `set(address, nonce, 300)` expired it after 300ms rather than 5 minutes —
   // any signature arriving later than a third of a second was rejected.
   it('keeps the nonce alive well past a second', async () => {
     vi.useFakeTimers();
-    const { siwe } = await build();
+    const { siwe, caching } = await build();
 
-    const first = await siwe.getNonce(WALLET);
+    const nonce = await siwe.getNonce(WALLET);
     vi.advanceTimersByTime(60_000);
 
-    await expect(siwe.getNonce(WALLET)).resolves.toBe(first);
+    await expect(caching.get<string>(WALLET)).resolves.toBe(nonce);
   });
 
   it('holds the nonce for five minutes, then lets it lapse', async () => {
@@ -72,29 +108,59 @@ describe('SiweService', () => {
     await expect(caching.get<string>(WALLET)).resolves.toBeUndefined();
   });
 
-  it('issues a fresh nonce once the previous one has expired', async () => {
-    vi.useFakeTimers();
-    const { siwe } = await build();
-    const first = await siwe.getNonce(WALLET);
-
-    vi.advanceTimersByTime(301_000);
-
-    await expect(siwe.getNonce(WALLET)).resolves.not.toBe(first);
-  });
-
   it('rejects a verification when no nonce was ever issued', async () => {
     const { siwe } = await build();
-    const message = new SiweMessage({
-      domain: 'example.com',
-      address: WALLET,
-      uri: 'https://example.com',
-      version: '1',
-      chainId: 1,
-      nonce: generateNonce(),
-    }).prepareMessage();
 
-    await expect(siwe.verify(WALLET, '0xsignature', message)).rejects.toThrow(
+    await expect(
+      siwe.verify(WALLET, '0xsignature', messageWith(generateNonce())),
+    ).rejects.toThrow('Invalid nonce');
+  });
+
+  // Proving *a* nonce exists for the wallet is not enough: the one carried by
+  // the message is attacker-controlled and has to match what we issued.
+  it('rejects a message carrying a nonce we never issued', async () => {
+    const { siwe } = await build();
+    const check = stubSignatureCheck(siwe, true);
+    await siwe.getNonce(WALLET);
+
+    await expect(
+      siwe.verify(WALLET, '0xsignature', messageWith(generateNonce())),
+    ).rejects.toThrow('Invalid nonce');
+    expect(check).not.toHaveBeenCalled();
+  });
+
+  it('rejects a signature that does not check out', async () => {
+    const { siwe } = await build();
+    stubSignatureCheck(siwe, false);
+    const nonce = await siwe.getNonce(WALLET);
+
+    await expect(
+      siwe.verify(WALLET, '0xnope', messageWith(nonce)),
+    ).rejects.toThrow('Invalid signature');
+  });
+
+  it('accepts a valid signature and consumes the nonce', async () => {
+    const { siwe, caching } = await build();
+    stubSignatureCheck(siwe, true);
+    const nonce = await siwe.getNonce(WALLET);
+    const message = messageWith(nonce);
+
+    await expect(siwe.verify(WALLET, '0xgood', message)).resolves.toBe(true);
+
+    await expect(caching.get<string>(WALLET)).resolves.toBeUndefined();
+    await expect(siwe.verify(WALLET, '0xgood', message)).rejects.toThrow(
       'Invalid nonce',
     );
+  });
+
+  it('keeps the nonce when verification fails, so the user can retry', async () => {
+    const { siwe, caching } = await build();
+    stubSignatureCheck(siwe, false);
+    const nonce = await siwe.getNonce(WALLET);
+
+    await expect(
+      siwe.verify(WALLET, '0xnope', messageWith(nonce)),
+    ).rejects.toThrow('Invalid signature');
+    await expect(caching.get<string>(WALLET)).resolves.toBe(nonce);
   });
 });

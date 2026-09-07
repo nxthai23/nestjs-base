@@ -30,44 +30,45 @@ export class SiweService {
   }
 
   async getNonce(walletAddress: string): Promise<string> {
-    const existedNonce = await this.caching.get<string>(walletAddress);
-    if (existedNonce) return existedNonce;
+    // Deliberately not reusing an outstanding nonce: a nonce is single-use, so
+    // handing the same one back for the rest of its ttl would keep a captured
+    // signature replayable for that whole window.
     const nonce = generateNonce();
     await this.caching.set(walletAddress, nonce, NONCE_TTL_SECONDS);
     return nonce;
   }
 
   async verify(walletAddress: string, signature: string, message: string) {
-    try {
-      const siweMessage = new SiweMessage(message);
-      // Verify nonce
-      const nonce = siweMessage.nonce;
+    const siweMessage = new SiweMessage(message);
+    const nonce = siweMessage.nonce;
 
-      if (!nonce) {
-        throw new BadRequestException('Nonce is missing');
-      }
-
-      const existedNonce = await this.caching.get<string>(walletAddress);
-
-      if (!existedNonce) {
-        throw new BadRequestException('Invalid nonce');
-      }
-
-      // Verify signature
-      const isValidSignature = this.publicClient.verifySiweMessage({
-        message: message,
-        signature: signature as `0x${string}`,
-        nonce,
-      });
-
-      if (!isValidSignature) {
-        throw new BadRequestException('Invalid signature');
-      }
-
-      // @TODO: add user or do logic here
-      return true;
-    } catch (error) {
-      throw error;
+    if (!nonce) {
+      throw new BadRequestException('Nonce is missing');
     }
+
+    const issuedNonce = await this.caching.get<string>(walletAddress);
+
+    // The nonce carried by the message is attacker-controlled, so proving one
+    // exists for this wallet is not enough — it has to be the one we issued.
+    if (!issuedNonce || issuedNonce !== nonce) {
+      throw new BadRequestException('Invalid nonce');
+    }
+
+    const isValidSignature = await this.publicClient.verifySiweMessage({
+      message: message,
+      signature: signature as `0x${string}`,
+      nonce,
+    });
+
+    if (!isValidSignature) {
+      throw new BadRequestException('Invalid signature');
+    }
+
+    // Consume the nonce. Without this the same signature verifies again for
+    // the remainder of the ttl.
+    await this.caching.delete(walletAddress);
+
+    // @TODO: add user or do logic here
+    return true;
   }
 }
