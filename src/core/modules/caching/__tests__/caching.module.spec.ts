@@ -62,6 +62,22 @@ describe('CachingModule', () => {
     expect(moduleRef.get(CACHING_ADAPTER)).toBeDefined();
   });
 
+  // The adapter is built by a useFactory, not resolved as a class provider,
+  // so it is worth pinning down that Nest still runs its lifecycle hooks -
+  // that is the only thing closing the cache connection on a rolling restart.
+  it('runs the adapter shutdown hook when the app closes', async () => {
+    const moduleRef = await compileWithDriver('redis');
+    const app = moduleRef.createNestApplication();
+    await app.init();
+
+    const adapter = app.get<RedisService>(CACHING_ADAPTER);
+    const hook = vi.spyOn(adapter, 'beforeApplicationShutdown');
+
+    await app.close();
+
+    expect(hook).toHaveBeenCalled();
+  });
+
   it('boots with no configuration at all, since memory is the default driver', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [

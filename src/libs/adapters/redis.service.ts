@@ -75,7 +75,21 @@ export class RedisService
   }
 
   async beforeApplicationShutdown(): Promise<void> {
-    await this.client.quit();
+    // With lazyConnect the client can still be in `wait`: no socket has ever
+    // been opened. ioredis answers QUIT by connecting first, just to say
+    // goodbye - and with retries disabled that connect attempt rejects, so an
+    // app that never touched the cache would fail its own shutdown.
+    if (this.client.status === 'wait' || this.client.status === 'end') {
+      this.client.disconnect();
+      return;
+    }
+
+    try {
+      await this.client.quit();
+    } catch {
+      // A cache disappearing mid-shutdown is not worth failing shutdown over.
+      this.client.disconnect();
+    }
   }
 
   private async execute<T>(

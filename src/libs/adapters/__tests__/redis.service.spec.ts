@@ -18,6 +18,11 @@ function clientOf(adapter: RedisService): Redis {
   return (adapter as unknown as { client: Redis }).client;
 }
 
+/** ioredis keeps its connection state in a plain property. */
+function setStatus(adapter: RedisService, status: string): void {
+  (clientOf(adapter) as unknown as { status: string }).status = status;
+}
+
 describe('RedisService', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -134,12 +139,44 @@ describe('RedisService', () => {
     expect(options.retryStrategy()).toBeNull();
   });
 
-  it('closes the connection on application shutdown', async () => {
+  it('closes a live connection on application shutdown', async () => {
     const quit = vi.spyOn(Redis.prototype, 'quit').mockResolvedValue('OK');
     const cache = new RedisService(makeConfig());
+    setStatus(cache, 'ready');
 
     await cache.beforeApplicationShutdown();
 
     expect(quit).toHaveBeenCalled();
+  });
+
+  // lazyConnect leaves the client in `wait` until the first command. ioredis
+  // answers QUIT there by opening the connection first, and with retries
+  // disabled that attempt rejects - so an app that never touched the cache
+  // used to fail its own shutdown.
+  it('sends no QUIT when the client never connected', async () => {
+    const connect = vi.spyOn(Redis.prototype, 'connect');
+    const quit = vi.spyOn(Redis.prototype, 'quit');
+    const disconnect = vi.spyOn(Redis.prototype, 'disconnect');
+    const cache = new RedisService(makeConfig());
+
+    expect(clientOf(cache).status).toBe('wait');
+    await expect(cache.beforeApplicationShutdown()).resolves.toBeUndefined();
+
+    expect(quit).not.toHaveBeenCalled();
+    expect(connect).not.toHaveBeenCalled();
+    expect(disconnect).toHaveBeenCalled();
+  });
+
+  it('drops the socket rather than failing shutdown when QUIT rejects', async () => {
+    vi.spyOn(Redis.prototype, 'quit').mockRejectedValue(
+      new Error('Connection is closed.'),
+    );
+    const disconnect = vi.spyOn(Redis.prototype, 'disconnect');
+    const cache = new RedisService(makeConfig());
+    setStatus(cache, 'ready');
+
+    await expect(cache.beforeApplicationShutdown()).resolves.toBeUndefined();
+
+    expect(disconnect).toHaveBeenCalled();
   });
 });
