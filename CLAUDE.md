@@ -44,7 +44,9 @@ docker-compose up -d --build
 - `<feature>.module.ts` — NestJS module
 - `<feature>.controller.ts` — HTTP endpoints
 - `<feature>.service.ts` — business logic (extends `BaseService`)
-- `entities/` — MikroORM entities (auto-discovered from `src/api/**/entities/*.entity.ts`)
+- `entities/` — MikroORM entities. Register each one in `ENTITIES`
+  (`src/core/database/entities.ts`); discovery is an explicit list, not a glob,
+  and `entities.spec.ts` fails if a new entity file is left out.
 - `dto/` — request DTOs with class-validator decorators
 
 **Ports & adapters**: swappable third-party dependencies go behind a port.

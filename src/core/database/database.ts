@@ -10,6 +10,7 @@ import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { SeedManager } from '@mikro-orm/seeder';
+import { ENTITIES } from './entities';
 
 @Injectable()
 export class DatabaseConfig implements MikroOrmOptionsFactory {
@@ -24,9 +25,9 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
       cache: { enabled: false },
       loadStrategy: LoadStrategy.JOINED,
       debug: nodeEnv !== 'production',
-      entities: ['dist/api/**/entities/*.entity.js'],
-      entitiesTs: ['src/api/**/entities/*.entity.ts'],
-      // Enable automatic loading of entities on dev, remove on production
+      // Listed, not globbed - see ENTITIES for why.
+      entities: ENTITIES,
+      // Entities registered through MikroOrmModule.forFeature are added too.
       autoloadEntities: true,
       migrations: {
         path: join(process.cwd(), 'dist', 'migrations'),
