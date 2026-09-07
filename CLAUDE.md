@@ -71,6 +71,9 @@ Currently applied to:
   miss rather than failing the request, so the health check is what surfaces
   an outage. The port is the intersection of all four drivers — Redis-only
   primitives (sorted sets, pipelines, `SCAN`) are a separate concern.
+  The cache is one shared map, so feature code takes a namespace
+  (`caching.namespace('siwe:nonce')`) rather than writing raw keys;
+  `CACHE_KEY_PREFIX` sits underneath that, for a shared cache server.
 
 Logging and RBAC deliberately still call their libraries directly — add a port
 when a second implementation actually appears, not before.
@@ -101,5 +104,6 @@ Copy `env.example` to `.env` (or use the existing `.env`). Key variables:
 - `ENABLE_SEEDER` — set to `1` to run seeders on startup
 - `CACHE_DRIVER` — `memory` (default), `redis`, `valkey` or `memcached`
 - `CACHE_TTL` — default cache entry lifetime, in **seconds** (default `60`)
+- `CACHE_KEY_PREFIX` — prepended to every cache key; set it when the cache server is shared between apps or environments (default empty)
 - `CACHE_MAX_ENTRIES` — memory driver only: entries held before the least recently used is evicted (default `10000`)
 - `REDIS_URL` — required only when `CACHE_DRIVER=redis`

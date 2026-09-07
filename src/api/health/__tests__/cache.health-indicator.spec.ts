@@ -94,6 +94,7 @@ describe('CacheHealthIndicator', () => {
         HealthIndicatorService,
         CachingService,
         { provide: CACHING_ADAPTER, useValue: adapter },
+        { provide: ConfigService, useValue: new ConfigService({}) },
       ],
     }).compile();
     // The facade swallows the outage...

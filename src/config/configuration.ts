@@ -31,6 +31,8 @@ export default () => ({
     // 'memory' | 'redis' | 'valkey' | 'memcached'
     driver: process.env.CACHE_DRIVER || 'memory',
     ttl: parseInt(process.env.CACHE_TTL) || 60, // seconds
+    // prepended to every cache key; set it when a cache server is shared
+    keyPrefix: process.env.CACHE_KEY_PREFIX || '',
     // memory driver only: entries held before the coldest is evicted
     maxEntries: parseInt(process.env.CACHE_MAX_ENTRIES) || 10000,
     redis: {

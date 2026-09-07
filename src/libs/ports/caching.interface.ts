@@ -29,6 +29,17 @@ export interface CachingInterface {
   clear(): Promise<void>;
 }
 
+/**
+ * A view of the cache confined to one namespace. Keys handed to it are
+ * qualified before they reach a driver, so two features cannot land on the
+ * same key by picking the same identifier.
+ *
+ * `clear` is deliberately absent. Wiping one namespace means enumerating its
+ * keys, and memcached has no SCAN - the port is the intersection of what every
+ * driver can do, so offering it here would be a promise only some drivers keep.
+ */
+export type NamespacedCache = Omit<CachingInterface, 'clear'>;
+
 export class CachingError extends Error {
   constructor(
     readonly operation: string,

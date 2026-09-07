@@ -215,6 +215,7 @@ and `src/libs/registry.ts` maps a driver name to its adapter.
 ```
 CACHE_DRIVER=memory        # memory | redis | valkey | memcached
 CACHE_TTL=60               # default entry lifetime, in SECONDS
+CACHE_KEY_PREFIX=          # prepended to every key; set it on a shared cache server
 CACHE_MAX_ENTRIES=10000    # memory driver only: cap before LRU eviction
 ```
 

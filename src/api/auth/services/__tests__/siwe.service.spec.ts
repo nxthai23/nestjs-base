@@ -8,6 +8,9 @@ import { MemoryService } from '@libs/adapters/memory.service';
 
 const WALLET = '0x1111111111111111111111111111111111111111';
 
+/** Where SiweService's namespace actually puts the nonce. */
+const NONCE_KEY = `siwe:nonce:${WALLET}`;
+
 async function build() {
   const moduleRef = await Test.createTestingModule({
     imports: [
@@ -68,7 +71,7 @@ describe('SiweService', () => {
     const nonce = await siwe.getNonce(WALLET);
 
     expect(nonce).toEqual(expect.any(String));
-    await expect(caching.get<string>(WALLET)).resolves.toBe(nonce);
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBe(nonce);
   });
 
   // A nonce is single-use. Handing back an outstanding one would keep a
@@ -80,7 +83,7 @@ describe('SiweService', () => {
     const second = await siwe.getNonce(WALLET);
 
     expect(second).not.toBe(first);
-    await expect(caching.get<string>(WALLET)).resolves.toBe(second);
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBe(second);
   });
 
   // The nonce previously used cache-manager, whose ttl is in milliseconds, so
@@ -93,7 +96,7 @@ describe('SiweService', () => {
     const nonce = await siwe.getNonce(WALLET);
     vi.advanceTimersByTime(60_000);
 
-    await expect(caching.get<string>(WALLET)).resolves.toBe(nonce);
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBe(nonce);
   });
 
   it('holds the nonce for five minutes, then lets it lapse', async () => {
@@ -102,10 +105,10 @@ describe('SiweService', () => {
     const first = await siwe.getNonce(WALLET);
 
     vi.advanceTimersByTime(299_000);
-    await expect(caching.get<string>(WALLET)).resolves.toBe(first);
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBe(first);
 
     vi.advanceTimersByTime(2_000);
-    await expect(caching.get<string>(WALLET)).resolves.toBeUndefined();
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBeUndefined();
   });
 
   it('rejects a verification when no nonce was ever issued', async () => {
@@ -147,7 +150,7 @@ describe('SiweService', () => {
 
     await expect(siwe.verify(WALLET, '0xgood', message)).resolves.toBe(true);
 
-    await expect(caching.get<string>(WALLET)).resolves.toBeUndefined();
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBeUndefined();
     await expect(siwe.verify(WALLET, '0xgood', message)).rejects.toThrow(
       'Invalid nonce',
     );
@@ -161,6 +164,6 @@ describe('SiweService', () => {
     await expect(
       siwe.verify(WALLET, '0xnope', messageWith(nonce)),
     ).rejects.toThrow('Invalid signature');
-    await expect(caching.get<string>(WALLET)).resolves.toBe(nonce);
+    await expect(caching.get<string>(NONCE_KEY)).resolves.toBe(nonce);
   });
 });
