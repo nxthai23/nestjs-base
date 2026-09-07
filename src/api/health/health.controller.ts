@@ -11,7 +11,7 @@ import { HealthCheckService } from '@nestjs/terminus';
 import { ApiResult } from '@core/response/api-result';
 import { MikroOrmHealthIndicator } from './indicators/mikro-orm.health-indicator';
 import { MemoryHealthIndicator } from './indicators/memory.health-indicator';
-import { RedisHealthIndicator } from './indicators/redis.health-indicator';
+import { CacheHealthIndicator } from './indicators/cache.health-indicator';
 
 @Controller('health')
 export class HealthController {
@@ -19,7 +19,7 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly db: MikroOrmHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
-    private readonly redis: RedisHealthIndicator,
+    private readonly cache: CacheHealthIndicator,
   ) {}
 
   @Get()
@@ -29,7 +29,7 @@ export class HealthController {
       const result = await this.health.check([
         () => this.db.isHealthy('database'),
         () => this.memory.isHealthy('memory'),
-        () => this.redis.isHealthy('redis'),
+        () => this.cache.isHealthy('cache'),
       ]);
 
       return ApiResult.success(result, 'Health check passed');

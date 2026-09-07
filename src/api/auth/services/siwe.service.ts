@@ -1,9 +1,12 @@
-import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CachingService } from '@core/modules/caching/caching.service';
 import { generateNonce, SiweMessage } from 'siwe';
 import { createPublicClient, http } from 'viem';
 import { abstract, abstractTestnet } from 'viem/chains';
+
+/** How long an issued nonce stays valid. The caching port measures in seconds. */
+const NONCE_TTL_SECONDS = 5 * 60;
 
 /**
  * SIWE = Sign-In with Ethereum
@@ -15,7 +18,7 @@ import { abstract, abstractTestnet } from 'viem/chains';
 export class SiweService {
   private publicClient;
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private caching: CachingService,
     private configService: ConfigService,
   ) {
     // change the chain based on the environment
@@ -27,10 +30,10 @@ export class SiweService {
   }
 
   async getNonce(walletAddress: string): Promise<string> {
-    const existedNonce = await this.cacheManager.get<string>(walletAddress);
+    const existedNonce = await this.caching.get<string>(walletAddress);
     if (existedNonce) return existedNonce;
     const nonce = generateNonce();
-    await this.cacheManager.set(walletAddress, nonce, 300); // Store nonce for 5 minutes
+    await this.caching.set(walletAddress, nonce, NONCE_TTL_SECONDS);
     return nonce;
   }
 
@@ -44,7 +47,7 @@ export class SiweService {
         throw new BadRequestException('Nonce is missing');
       }
 
-      const existedNonce = await this.cacheManager.get<string>(walletAddress);
+      const existedNonce = await this.caching.get<string>(walletAddress);
 
       if (!existedNonce) {
         throw new BadRequestException('Invalid nonce');

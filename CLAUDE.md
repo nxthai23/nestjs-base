@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Tech Stack
 
-NestJS 11 · MikroORM 7 · TypeScript 6 · pnpm. Supports both **MongoDB** and **PostgreSQL** (selected via `DB_TYPE` env var, default `mongodb`). Auth uses Passport JWT + local strategy with SIWE (Sign In With Ethereum) support. Redis is optional for caching — falls back to in-memory when `REDIS_URL` is not set.
+NestJS 11 · MikroORM 7 · TypeScript 6 · pnpm. Supports both **MongoDB** and **PostgreSQL** (selected via `DB_TYPE` env var, default `mongodb`). Auth uses Passport JWT + local strategy with SIWE (Sign In With Ethereum) support. Caching sits behind a port with four drivers, selected by `CACHE_DRIVER` and defaulting to in-memory, so no cache server is required to run.
 
 ## Commands
 
@@ -59,10 +59,21 @@ docker-compose up -d --build
   `forRootAsync()` resolves the driver from config. Feature code injects the
   core service, never an adapter.
 
-Currently applied to storage (`StorageService`, with `S3Service` / `R2Service`
-selected via `STORAGE_DRIVER`). Logging, caching and RBAC deliberately still
-call their libraries directly — add a port when a second implementation
-actually appears, not before.
+Currently applied to:
+
+- **storage** — `StorageService`, with `S3Service` / `R2Service` selected via
+  `STORAGE_DRIVER`. Not yet registered in `app.module.ts`: its adapters call
+  `getOrThrow` for credentials, so it waits for the first consumer.
+- **caching** — `CachingService`, with `MemoryService` / `RedisService` /
+  `ValkeyService` / `MemcachedService` selected via `CACHE_DRIVER` (default
+  `memory`). Registered globally in `app.module.ts`. TTLs are in **seconds**.
+  Reads **fail open**: an unreachable cache logs an error and behaves as a
+  miss rather than failing the request, so the health check is what surfaces
+  an outage. The port is the intersection of all four drivers — Redis-only
+  primitives (sorted sets, pipelines, `SCAN`) are a separate concern.
+
+Logging and RBAC deliberately still call their libraries directly — add a port
+when a second implementation actually appears, not before.
 
 **Path aliases** (defined in `tsconfig.json`):
 - `@core/*` → `src/core/*`
@@ -88,4 +99,6 @@ actually appears, not before.
 Copy `env.example` to `.env` (or use the existing `.env`). Key variables:
 - `DB_TYPE` — `mongodb` (default) or `postgresql`
 - `ENABLE_SEEDER` — set to `1` to run seeders on startup
-- `REDIS_URL` — optional; omit to use memory cache
+- `CACHE_DRIVER` — `memory` (default), `redis`, `valkey` or `memcached`
+- `CACHE_TTL` — default cache entry lifetime, in **seconds** (default `60`)
+- `REDIS_URL` — required only when `CACHE_DRIVER=redis`

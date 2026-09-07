@@ -206,6 +206,54 @@ so provider-specific error shapes never leak into feature code.
 > Feature code must never import from `src/libs/adapters/` — depend on the port
 > and inject `StorageService`. An ESLint rule enforces this.
 
+### Caching (Memory / Redis / Valkey / Memcached)
+
+Same layout: the contract is in `src/libs/ports/caching.interface.ts`, the
+providers in `src/libs/adapters/` (`memory`, `redis`, `valkey`, `memcached`),
+and `src/libs/registry.ts` maps a driver name to its adapter.
+
+```
+CACHE_DRIVER=memory        # memory | redis | valkey | memcached
+CACHE_TTL=60               # default entry lifetime, in SECONDS
+```
+
+`memory` is the default, so the app runs with no cache configuration at all.
+The module is already registered in `app.module.ts` and is global — just inject
+`CachingService`:
+
+```typescript
+import { CachingService } from '@core/modules/caching/caching.service';
+
+@Injectable()
+export class ProfileService {
+  constructor(private readonly caching: CachingService) {}
+
+  async find(id: string) {
+    const cached = await this.caching.get<Profile>(`profile:${id}`);
+    if (cached) return cached;
+
+    const profile = await this.repo.findOne(id);
+    await this.caching.set(`profile:${id}`, profile, 300); // seconds
+    return profile;
+  }
+}
+```
+
+**TTL is in seconds**, everywhere — the port, the config and every adapter.
+
+**Reads fail open.** If the cache server is unreachable, `get` returns
+`undefined`, `has` returns `false`, and writes are dropped; the failure is
+logged at `error` level and the request continues without a cache. A broken
+cache makes things slower, never a 500 — which also means it is invisible in
+responses, so `GET /health` is what tells you the cache is down.
+
+The port is deliberately the intersection of what all four drivers can do.
+Memcached has no sorted sets, pipelines or `SCAN`, so those are not caching
+features — a leaderboard or sliding-window counter needs its own port. The
+Memcached adapter also rejects a TTL over 30 days (memcached would read it as
+an absolute 1970 timestamp) and keys over 250 bytes, rather than failing
+obscurely at runtime.
+
 ## Claude PR Review
 
 Pull requests targeting `dev` are automatically reviewed by Claude via the

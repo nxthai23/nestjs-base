@@ -27,10 +27,21 @@ export default () => ({
   appPort: parseInt(process.env.APP_PORT) || 8080,
   dbType: process.env.DB_TYPE,
   nodeEnv: process.env.NODE_ENV,
-  redis: {
-    url: process.env.REDIS_URL,
-    ttl: parseInt(process.env.REDIS_TTL) || 60 * 1000, // Default 1 minute in ms
-    type: process.env.REDIS_TYPE || 'single', // 'single' or 'cluster'
+  caching: {
+    // 'memory' | 'redis' | 'valkey' | 'memcached'
+    driver: process.env.CACHE_DRIVER || 'memory',
+    ttl: parseInt(process.env.CACHE_TTL) || 60, // seconds
+    redis: {
+      url: process.env.REDIS_URL,
+    },
+    valkey: {
+      url: process.env.VALKEY_URL,
+    },
+    memcached: {
+      servers: process.env.MEMCACHED_SERVERS, // "host:11211,host2:11211"
+      username: process.env.MEMCACHED_USERNAME,
+      password: process.env.MEMCACHED_PASSWORD,
+    },
   },
   isEnableSeeder: parseInt(process.env.ENABLE_SEEDER) || 0,
   storage: {

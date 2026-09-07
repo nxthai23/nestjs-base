@@ -216,9 +216,24 @@ export class ValkeyService extends RedisService {
 }
 ```
 
-That is the whole file. Valkey 7.2 is wire-identical to Redis; the separate
-driver name exists so the registry states the supported providers honestly, and
-so there is somewhere to put the divergence that has already begun in Valkey 8.
+Valkey 7.2 is wire-identical to Redis, so the driver was expected to differ only
+in which config keys it reads.
+
+**It does not** — implementation turned up a real divergence. `ioredis`
+recognises only `redis://` and `rediss://`. Handed any other scheme it falls
+back to parsing the string as `host:port`, silently and without error:
+
+| URL | ioredis connects to |
+| --- | --- |
+| `redis://valkey-primary:6379` | `valkey-primary:6379` |
+| `valkey://valkey-primary:6379` | host **`valkey`**, port 6379 |
+| `valkeys://cache:6380` | host **`valkeys`**, port **6379**, **TLS off** |
+
+So `VALKEY_URL=valkeys://prod-cache:6380` would dial the wrong host
+unencrypted while looking correct. `ValkeyService` therefore normalises
+`valkey://` → `redis://` and `valkeys://` → `rediss://` before the client sees
+the url. That quirk is exactly what an adapter is for, and it is why the file
+earns its place beyond renaming config keys.
 
 ### `memcached.service.ts`
 
@@ -272,7 +287,17 @@ than going through the degrading facade — otherwise fail-open would report a
 dead Redis as healthy. This is the one legitimate consumer of `CACHING_ADAPTER`
 outside the module.
 
-The endpoint's `redis` key is renamed to `cache`.
+Two details settled while implementing:
+
+- It reports the **root cause**, not the wrapper. `CachingError.message` reads
+  "Caching set failed for key …", which is true but useless to whoever is
+  reading a health check, so the indicator unwraps `cause` and reports
+  `ECONNREFUSED` instead.
+- A write that succeeds but does not read back is reported `down`. A cache that
+  silently discards everything is not healthy.
+
+The response also carries the `driver` that was checked. The endpoint's `redis`
+key is renamed to `cache`.
 
 ## Configuration
 
