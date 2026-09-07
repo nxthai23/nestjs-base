@@ -146,6 +146,55 @@ just `@UseFilters(HttpExceptionFilter)` and throw:
 }
 ```
 
+### File storage (S3 / R2)
+
+Storage follows the ports & adapters layout: the contract lives in
+`src/libs/ports/storage.interface.ts`, the providers in `src/libs/adapters/`
+(`s3.service.ts`, `r2.service.ts`), and `src/libs/registry.ts` maps a driver
+name to its adapter.
+
+Pick a provider with one env var — no code changes:
+
+```
+STORAGE_DRIVER=s3          # or r2
+```
+
+then fill in the matching `S3_*` / `R2_*` values from `env.example`. Set
+`*_PUBLIC_BASE_URL` if a CDN or custom domain fronts the bucket; otherwise
+public URLs fall back to the provider's own bucket host.
+
+Register the module once (it is global), then inject `StorageService`:
+
+```typescript
+// app.module.ts
+imports: [StorageModule.forRootAsync()],
+```
+
+```typescript
+import { StorageService } from '@core/modules/storage/storage.service';
+
+@Injectable()
+export class AvatarService {
+  constructor(private readonly storage: StorageService) {}
+
+  async upload(userId: string, file: Express.Multer.File) {
+    const { key } = await this.storage.putObject({
+      key: `avatars/${userId}.png`,
+      body: file.buffer,
+      contentType: file.mimetype,
+    });
+    return this.storage.getPublicUrl(key);
+  }
+}
+```
+
+Use `getSignedUrl(key, expiresInSeconds)` for private objects. Adapter failures
+arrive as `StorageError` (carrying `operation`, `key` and the original `cause`),
+so provider-specific error shapes never leak into feature code.
+
+> Feature code must never import from `src/libs/adapters/` — depend on the port
+> and inject `StorageService`. An ESLint rule enforces this.
+
 ## Claude PR Review
 
 Pull requests targeting `dev` are automatically reviewed by Claude via the

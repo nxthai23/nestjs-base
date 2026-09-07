@@ -238,10 +238,21 @@ export class StorageModule {
 }
 ```
 
-Registered in `app.module.ts` alongside the other infrastructure modules as
-`StorageModule.forRootAsync()`. It is `global: true`, matching how
-`CacheModule.registerAsync({ isGlobal: true })` is already registered there, so
-feature modules do not each need to import it.
+The module is `global: true` — matching how
+`CacheModule.registerAsync({ isGlobal: true })` is already registered — so one
+import anywhere exposes `StorageService` app-wide.
+
+It is deliberately **not** imported in `app.module.ts` yet. Adapters read their
+credentials with `getOrThrow` at construction, so registering the module before
+any feature needs storage would make S3/R2 credentials mandatory for every
+`pnpm start:dev` and for the e2e suite, which boots `AppModule`. Since this
+change ships no consumer (see [Out of scope](#out-of-scope)), registration
+belongs to the first feature that actually uploads something:
+
+```ts
+// app.module.ts — add when the first storage consumer lands
+StorageModule.forRootAsync(),
+```
 
 An unset `STORAGE_DRIVER` falls back to `s3` (the `configuration.ts` default);
 a driver name that is not in the registry throws at application boot rather
@@ -445,7 +456,6 @@ with an override lifting the rule for `src/libs/registry.ts` itself.
 5. `src/libs/registry.ts`.
 6. `src/core/modules/storage/` — constant, service, module.
 7. `configuration.ts` + `env.example`.
-8. Register `StorageModule.forRootAsync()` in `app.module.ts`.
-9. Adapter and service specs.
-10. ESLint restricted-import rule.
-11. `CLAUDE.md` + `README.md`.
+8. Adapter, service and module specs.
+9. ESLint restricted-import rule.
+10. `CLAUDE.md` + `README.md`.

@@ -47,6 +47,23 @@ docker-compose up -d --build
 - `entities/` — MikroORM entities (auto-discovered from `src/api/**/entities/*.entity.ts`)
 - `dto/` — request DTOs with class-validator decorators
 
+**Ports & adapters**: swappable third-party dependencies go behind a port.
+
+- `src/libs/ports/*.interface.ts` — the contract, in domain language. No SDK types.
+- `src/libs/adapters/*.service.ts` — one file per provider, implements a port.
+- `src/libs/registry.ts` — maps a driver name to its adapter class. **The only
+  file allowed to import from `libs/adapters/`** (enforced by an ESLint
+  `no-restricted-imports` rule).
+- `src/core/modules/<concern>/` — a `<concern>.service.ts` implementing the port
+  by delegating to the wired adapter, plus a `<concern>.module.ts` whose
+  `forRootAsync()` resolves the driver from config. Feature code injects the
+  core service, never an adapter.
+
+Currently applied to storage (`StorageService`, with `S3Service` / `R2Service`
+selected via `STORAGE_DRIVER`). Logging, caching and RBAC deliberately still
+call their libraries directly — add a port when a second implementation
+actually appears, not before.
+
 **Path aliases** (defined in `tsconfig.json`):
 - `@core/*` → `src/core/*`
 - `@api/*` → `src/api/*`
