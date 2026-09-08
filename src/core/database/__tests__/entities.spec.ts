@@ -12,13 +12,20 @@ function entityFiles(dir: string): string[] {
   });
 }
 
-/** Class names declared as `export class X extends BaseEntity`. */
-function declaredEntities(file: string): string[] {
+/**
+ * Class names carrying an `@Entity(...)` decorator, allowing further
+ * decorators between it and the declaration.
+ */
+export function entityNamesIn(source: string): string[] {
   return [
-    ...readFileSync(file, 'utf8').matchAll(
-      /export class (\w+) extends BaseEntity/g,
+    ...source.matchAll(
+      /@Entity\([^)]*\)\s*(?:@\w+\([^)]*\)\s*)*export\s+(?:abstract\s+)?class\s+(\w+)/g,
     ),
   ].map(([, name]) => name);
+}
+
+function declaredEntities(file: string): string[] {
+  return entityNamesIn(readFileSync(file, 'utf8'));
 }
 
 /**
@@ -36,5 +43,65 @@ describe('ENTITIES', () => {
 
   it('finds entity files to check, so the walk itself cannot silently pass', () => {
     expect(entityFiles(API_DIR).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The guard is only as good as what it recognises as an entity. MikroORM marks
+ * entities with `@Entity()`; extending BaseEntity is this repo's convention,
+ * not a requirement — so anything keyed off the base class would miss an
+ * entity *and* leave it out of ENTITIES, the exact pair of mistakes above.
+ */
+describe('entityNamesIn', () => {
+  it('finds an entity that follows the repo convention', () => {
+    expect(
+      entityNamesIn(`
+        @Entity({ collection: 'users' })
+        export class User extends BaseEntity {}
+      `),
+    ).toEqual(['User']);
+  });
+
+  it('finds an entity that does not extend BaseEntity', () => {
+    expect(
+      entityNamesIn(`
+        @Entity()
+        export class AuditLog {
+          @PrimaryKey()
+          id!: string;
+        }
+      `),
+    ).toEqual(['AuditLog']);
+  });
+
+  it('finds an entity carrying other decorators as well', () => {
+    expect(
+      entityNamesIn(`
+        @Entity()
+        @Filter({ name: 'active' })
+        export class Session extends SomeOtherBase {}
+      `),
+    ).toEqual(['Session']);
+  });
+
+  it('ignores a class that is not an entity at all', () => {
+    expect(
+      entityNamesIn(`
+        export class UserDto extends BaseDto {}
+        export abstract class BaseEntity {}
+      `),
+    ).toEqual([]);
+  });
+
+  it('finds every entity when one file declares several', () => {
+    expect(
+      entityNamesIn(`
+        @Entity()
+        export class Role extends BaseEntity {}
+
+        @Entity()
+        export class Permission extends BaseEntity {}
+      `),
+    ).toEqual(['Role', 'Permission']);
   });
 });
