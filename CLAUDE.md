@@ -104,6 +104,9 @@ when a second implementation actually appears, not before.
 Copy `env.example` to `.env` (or use the existing `.env`). Key variables:
 - `DB_TYPE` — `mongodb` (default) or `postgresql`
 - `ENABLE_SEEDER` — set to `1` to run seeders on startup
+- `APP_DOMAIN` — domain a SIWE signature must be bound to. Unset disables the
+  domain check (logged as a warning at startup); required before exposing SIWE
+  login, since without it a signature produced on another site is accepted.
 - `CACHE_DRIVER` — `memory` (default), `redis`, `valkey` or `memcached`
 - `CACHE_TTL` — default cache entry lifetime, in **seconds** (default `60`)
 - `CACHE_KEY_PREFIX` — prepended to every cache key; set it when the cache server is shared between apps or environments (default empty)

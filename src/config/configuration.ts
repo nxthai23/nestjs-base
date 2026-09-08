@@ -28,6 +28,9 @@ export default () => ({
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiration: process.env.JWT_EXPIRATION,
   appPort: parseInt(process.env.APP_PORT) || 8080,
+  // The domain a SIWE signature must have been produced for. Unset means the
+  // domain check is off - see SiweService.
+  appDomain: process.env.APP_DOMAIN,
   dbType: process.env.DB_TYPE,
   nodeEnv: process.env.NODE_ENV,
   caching: {
