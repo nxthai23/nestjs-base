@@ -48,6 +48,11 @@ async function bootstrap() {
   const swagger = new Swagger();
   swagger.setupSwagger(app, swaggerConfig);
 
+  // Without this, SIGTERM kills the process outright and no provider's
+  // beforeApplicationShutdown runs - cache connections would be dropped
+  // rather than closed on every rolling restart.
+  app.enableShutdownHooks();
+
   await app.listen(port);
 
   // Log memory usage

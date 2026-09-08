@@ -3,7 +3,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health.controller';
 import { MikroOrmHealthIndicator } from './indicators/mikro-orm.health-indicator';
 import { MemoryHealthIndicator } from './indicators/memory.health-indicator';
-import { RedisHealthIndicator } from './indicators/redis.health-indicator';
+import { CacheHealthIndicator } from './indicators/cache.health-indicator';
 
 @Module({
   imports: [TerminusModule],
@@ -11,7 +11,7 @@ import { RedisHealthIndicator } from './indicators/redis.health-indicator';
   providers: [
     MikroOrmHealthIndicator,
     MemoryHealthIndicator,
-    RedisHealthIndicator,
+    CacheHealthIndicator,
   ],
 })
 export class HealthModule {}

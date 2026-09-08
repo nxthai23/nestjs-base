@@ -3,6 +3,10 @@
  * @see https://docs.nestjs.com/techniques/configuration
  */
 
+import { CACHING_DEFAULTS } from '@libs/ports/caching.interface';
+import { MAIL_DEFAULTS } from '@libs/ports/mail.interface';
+import { STORAGE_DEFAULTS } from '@libs/ports/storage.interface';
+
 export default () => ({
   saltRound: parseInt(process.env.SALT_ROUND),
   local: process.env.LOCAL,
@@ -25,12 +29,67 @@ export default () => ({
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiration: process.env.JWT_EXPIRATION,
   appPort: parseInt(process.env.APP_PORT) || 8080,
+  // The domain a SIWE signature must have been produced for. Unset means the
+  // domain check is off - see SiweService.
+  appDomain: process.env.APP_DOMAIN,
   dbType: process.env.DB_TYPE,
   nodeEnv: process.env.NODE_ENV,
-  redis: {
-    url: process.env.REDIS_URL,
-    ttl: parseInt(process.env.REDIS_TTL) || 60 * 1000, // Default 1 minute in ms
-    type: process.env.REDIS_TYPE || 'single', // 'single' or 'cluster'
+  caching: {
+    // 'memory' | 'redis' | 'valkey' | 'memcached'
+    driver: process.env.CACHE_DRIVER || CACHING_DEFAULTS.driver,
+    ttl: parseInt(process.env.CACHE_TTL) || CACHING_DEFAULTS.ttlSeconds,
+    // prepended to every cache key; set it when a cache server is shared
+    keyPrefix: process.env.CACHE_KEY_PREFIX || CACHING_DEFAULTS.keyPrefix,
+    // memory driver only: entries held before the coldest is evicted
+    maxEntries:
+      parseInt(process.env.CACHE_MAX_ENTRIES) || CACHING_DEFAULTS.maxEntries,
+    redis: {
+      url: process.env.REDIS_URL,
+    },
+    valkey: {
+      url: process.env.VALKEY_URL,
+    },
+    memcached: {
+      servers: process.env.MEMCACHED_SERVERS, // "host:11211,host2:11211"
+      username: process.env.MEMCACHED_USERNAME,
+      password: process.env.MEMCACHED_PASSWORD,
+    },
+  },
+  mail: {
+    // 'log' | 'ses' | 'sendgrid'
+    driver: process.env.MAIL_DRIVER || MAIL_DEFAULTS.driver,
+    // Default sender; a message may override it.
+    from: process.env.MAIL_FROM,
+    ses: {
+      region: process.env.SES_REGION,
+      accessKeyId: process.env.SES_ACCESS_KEY_ID,
+      secretAccessKey: process.env.SES_SECRET_ACCESS_KEY,
+    },
+    sendgrid: {
+      apiKey: process.env.SENDGRID_API_KEY,
+    },
   },
   isEnableSeeder: parseInt(process.env.ENABLE_SEEDER) || 0,
+  storage: {
+    driver: process.env.STORAGE_DRIVER || STORAGE_DEFAULTS.driver, // 's3' or 'r2'
+    s3: {
+      bucket: process.env.S3_BUCKET,
+      region: process.env.S3_REGION,
+      accessKeyId: process.env.S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+      // Multipart tuning; omit both to take the SDK-matching defaults.
+      partSizeMb: parseInt(process.env.S3_PART_SIZE_MB) || undefined,
+      uploadConcurrency:
+        parseInt(process.env.S3_UPLOAD_CONCURRENCY) || undefined,
+    },
+    r2: {
+      bucket: process.env.R2_BUCKET,
+      accountId: process.env.R2_ACCOUNT_ID,
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      partSizeMb: parseInt(process.env.R2_PART_SIZE_MB) || undefined,
+      uploadConcurrency:
+        parseInt(process.env.R2_UPLOAD_CONCURRENCY) || undefined,
+    },
+  },
 });

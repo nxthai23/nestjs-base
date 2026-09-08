@@ -146,6 +146,195 @@ just `@UseFilters(HttpExceptionFilter)` and throw:
 }
 ```
 
+### File storage (S3 / R2)
+
+Storage follows the ports & adapters layout: the contract lives in
+`src/libs/ports/storage.interface.ts`, the providers in `src/libs/adapters/`
+(`s3.service.ts`, `r2.service.ts`), and `src/libs/registry.ts` maps a driver
+name to its adapter.
+
+Pick a provider with one env var — no code changes:
+
+```
+STORAGE_DRIVER=s3          # or r2
+```
+
+then fill in the matching `S3_*` / `R2_*` values from `env.example`.
+
+Register the module once (it is global), then inject `StorageService`:
+
+```typescript
+// app.module.ts
+imports: [StorageModule.forRootAsync()],
+```
+
+**The flow: store the key, not the URL.** Upload returns the object key, which
+is what goes in the database; links are generated on read and expire.
+
+```typescript
+import { StorageService } from '@core/modules/storage/storage.service';
+
+@Injectable()
+export class AvatarService {
+  constructor(private readonly storage: StorageService) {}
+
+  async upload(userId: string, file: Express.Multer.File) {
+    const { key } = await this.storage.putObject({
+      key: `avatars/${userId}.png`,
+      body: file.buffer,
+      contentType: file.mimetype,
+    });
+    await this.userService.update(userId, { avatarKey: key });
+    return key;
+  }
+
+  async getAvatarUrl(user: User) {
+    // presigned, valid 15 minutes by default
+    return this.storage.getSignedUrl(user.avatarKey);
+  }
+}
+```
+
+**Two upload methods — you pick, by case, not by size.**
+
+| | `putObject` | `putLargeObject` |
+|---|---|---|
+| Requests | one | create + N parts + complete |
+| Memory | the whole body | `part size x concurrency` (20 MB by default) |
+| Ceiling | 5 GB (S3's single-PUT cap) | 5 TB |
+| On failure | nothing to clean up | aborts, so no billed parts are left |
+| Use for | avatars, thumbnails, generated documents | video, archives, anything streamed off a request |
+
+Nothing switches between them behind your back. The code doing the upload knows
+whether it is handling an avatar or a video; the storage layer does not, so it
+does not guess.
+
+```typescript
+await this.storage.putObject({ key, body: file.buffer, contentType });
+await this.storage.putLargeObject({ key, body: request, contentType });
+```
+
+`S3_PART_SIZE_MB` / `S3_UPLOAD_CONCURRENCY` (and the `R2_*` equivalents) tune
+how `putLargeObject` chops the body — they are not a threshold. Part size is
+floored at 5 MB because S3 rejects anything smaller for any part but the last.
+
+Keys are chosen by the caller, so re-uploading the same key overwrites in place
+instead of leaving orphaned objects. URLs are never persisted: they are signed
+per request, so they keep working after a bucket, domain or provider change.
+
+Use `getSignedUrl(key, expiresInSeconds)` for private objects. Adapter failures
+arrive as `StorageError` (carrying `operation`, `key` and the original `cause`),
+so provider-specific error shapes never leak into feature code.
+
+> Feature code must never import from `src/libs/adapters/` — depend on the port
+> and inject `StorageService`. An ESLint rule enforces this.
+
+### Caching (Memory / Redis / Valkey / Memcached)
+
+Same layout: the contract is in `src/libs/ports/caching.interface.ts`, the
+providers in `src/libs/adapters/` (`memory`, `redis`, `valkey`, `memcached`),
+and `src/libs/registry.ts` maps a driver name to its adapter.
+
+```
+CACHE_DRIVER=memory        # memory | redis | valkey | memcached
+CACHE_TTL=60               # default entry lifetime, in SECONDS
+CACHE_KEY_PREFIX=          # prepended to every key; set it on a shared cache server
+CACHE_MAX_ENTRIES=10000    # memory driver only: cap before LRU eviction
+```
+
+`memory` is the default, so the app runs with no cache configuration at all.
+The module is already registered in `app.module.ts` and is global — just inject
+`CachingService`:
+
+```typescript
+import { CachingService } from '@core/modules/caching/caching.service';
+
+@Injectable()
+export class ProfileService {
+  constructor(private readonly caching: CachingService) {}
+
+  async find(id: string) {
+    const cached = await this.caching.get<Profile>(`profile:${id}`);
+    if (cached) return cached;
+
+    const profile = await this.repo.findOne(id);
+    await this.caching.set(`profile:${id}`, profile, 300); // seconds
+    return profile;
+  }
+}
+```
+
+**TTL is in seconds**, everywhere — the port, the config and every adapter.
+
+**Reads fail open.** If the cache server is unreachable, `get` returns
+`undefined`, `has` returns `false`, and writes are dropped; the failure is
+logged at `error` level and the request continues without a cache. A broken
+cache makes things slower, never a 500 — which also means it is invisible in
+responses, so `GET /health` is what tells you the cache is down.
+
+`CachingService` exposes `get` / `set` / `delete` / `has` / `namespace` — but
+not `clear`. The drivers implement `clear` as a full flush, which
+`CACHE_KEY_PREFIX` does not scope, so on a shared cache server it would take
+every other app and environment with it. It stays on the adapter, for tests.
+
+The port is deliberately the intersection of what all four drivers can do.
+Memcached has no sorted sets, pipelines or `SCAN`, so those are not caching
+features — a leaderboard or sliding-window counter needs its own port. The
+Memcached adapter also rejects a TTL over 30 days (memcached would read it as
+an absolute 1970 timestamp) and keys over 250 bytes, rather than failing
+obscurely at runtime.
+
+### Mail (Log / SES / SendGrid)
+
+Same layout again: `src/libs/ports/mail.interface.ts` holds the contract,
+`src/libs/adapters/` the providers (`log-mail`, `ses`, `sendgrid`), and
+`src/libs/registry.ts` maps a driver name to its adapter.
+
+```
+MAIL_DRIVER=log                    # log | ses | sendgrid
+MAIL_FROM=no-reply@example.com     # default sender; a message may override it
+```
+
+`log` is the default: it writes the message to the log and sends nothing, so
+the app boots with no provider credentials and a developer running against
+production data cannot mail real users by accident. The module is registered in
+`app.module.ts` and global — just inject `MailService`:
+
+```typescript
+import { MailService } from '@core/modules/mail/mail.service';
+
+@Injectable()
+export class PasswordResetService {
+  constructor(private readonly mail: MailService) {}
+
+  async send(user: User, link: string) {
+    const { messageId } = await this.mail.send({
+      to: user.email,
+      subject: 'Reset your password',
+      html: renderResetEmail({ name: user.name, link }),
+      replyTo: 'support@example.com',
+    });
+    return messageId;
+  }
+}
+```
+
+`to`, `cc`, `bcc` and `replyTo` each take one address or a list. `MailService`
+normalises them, fills in `MAIL_FROM`, and rejects a message with no recipient,
+no subject or no body before any provider sees it — so the two drivers behave
+the same and fail the same way.
+
+**Mail does not fail open.** Unlike the cache, a send that fails throws: a
+password-reset mail that never went out has to reach the caller as an error,
+not a log line. Adapter failures arrive as `MailError` carrying `operation`,
+`recipient` and the original `cause`.
+
+**No templating in the port.** Render your template in the app and pass HTML.
+SES and SendGrid both have template systems, but they live in different places
+and take different data — putting them in the port would mean rebuilding every
+template to change provider. Attachments are out for the same kind of reason:
+SendGrid takes them directly, SES needs the message rebuilt as raw MIME.
+
 ## Claude PR Review
 
 Pull requests targeting `dev` are automatically reviewed by Claude via the

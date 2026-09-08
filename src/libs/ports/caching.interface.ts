@@ -1,0 +1,82 @@
+/**
+ * The caching contract, in domain language. It is deliberately the
+ * intersection of what Redis, Valkey, Memcached and an in-process Map can all
+ * do — Redis-only primitives (sorted sets, pipelines, SCAN) belong to a
+ * different concern with a different port, not here.
+ */
+export interface CachingInterface {
+  /** Resolves to undefined on a miss. */
+  get<T>(key: string): Promise<T | undefined>;
+
+  /**
+   * Omit ttlSeconds to use the driver's configured default.
+   *
+   * `undefined` is not a storable value - `get` already uses it to mean
+   * "miss", so a cached undefined would be indistinguishable from absence.
+   * Setting it removes the key instead.
+   */
+  set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
+
+  delete(key: string): Promise<void>;
+
+  has(key: string): Promise<boolean>;
+
+  /**
+   * Wipes everything the driver owns. On a shared Redis this is FLUSHDB and
+   * clears the whole logical database, not just this app's keys — `CACHE_KEY_PREFIX`
+   * does not scope it.
+   *
+   * Deliberately not re-exposed by `CachingService`, so feature code cannot
+   * reach it: hold an adapter directly if you need a blank slate in a test.
+   */
+  clear(): Promise<void>;
+}
+
+/**
+ * A view of the cache confined to one namespace. Keys handed to it are
+ * qualified before they reach a driver, so two features cannot land on the
+ * same key by picking the same identifier.
+ *
+ * `clear` is deliberately absent, for two reasons. Wiping one namespace means
+ * enumerating its keys, and memcached has no SCAN - the port is the
+ * intersection of what every driver can do, so offering it here would be a
+ * promise only some drivers keep. And the unscoped `clear` it would otherwise
+ * delegate to takes the whole server with it.
+ *
+ * `CachingService` implements this rather than the full port for the same
+ * reason.
+ */
+export type NamespacedCache = Omit<CachingInterface, 'clear'>;
+
+export class CachingError extends Error {
+  constructor(
+    readonly operation: string,
+    readonly key: string,
+    readonly cause?: unknown,
+  ) {
+    super(`Caching ${operation} failed for key "${key}"`);
+    this.name = 'CachingError';
+  }
+}
+
+/**
+ * The single definition of what caching does without configuration.
+ *
+ * It lives beside the port, not in the core module: adapters need it too, and
+ * an adapter reaching up into `core/` inverts the dependency the architecture
+ * is built on - `core` composes `libs`, never the other way round.
+ *
+ * `configuration.ts` applies these to the config object, so in a running app
+ * every key is present. The fallbacks at each read site exist for tests and
+ * for anyone composing `CachingModule` by hand - which is also why the module
+ * boots with no cache configuration at all.
+ */
+export const CACHING_DEFAULTS = {
+  driver: 'memory',
+  /** Entry lifetime, in seconds. */
+  ttlSeconds: 60,
+  /** Memory driver only: entries held before the coldest is evicted. */
+  maxEntries: 10000,
+  /** No deployment prefix unless one is configured. */
+  keyPrefix: '',
+} as const;
