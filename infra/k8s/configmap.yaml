@@ -14,5 +14,10 @@ data:
   MIN_POOL_SIZE: '1'
   MAX_POOL_SIZE: '10'
   MONGO_DB_NAME: 'localAuth'
-  REDIS_TTL: '3600'
-  REDIS_TYPE: 'single'
+  # No cache server in this setup, so the in-process driver. Switch to redis
+  # or valkey here and add the matching URL to secret.yaml.
+  CACHE_DRIVER: 'memory'
+  CACHE_TTL: '3600'
+  # Domain a SIWE signature must be bound to. Empty means the check is off —
+  # set it before exposing SIWE login. Nothing wires SiweService yet.
+  APP_DOMAIN: ''
