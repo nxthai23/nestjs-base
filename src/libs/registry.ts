@@ -25,3 +25,19 @@ export const registry = {
 
 export type StorageDriver = keyof typeof registry.storage;
 export type CachingDriver = keyof typeof registry.caching;
+
+/**
+ * Whether a driver name is actually registered.
+ *
+ * `group[driver]` on its own is not a membership test: a plain object answers
+ * for everything on `Object.prototype`, so a driver named `constructor` or
+ * `toString` resolves to something truthy and slips past a `!Adapter` guard.
+ *
+ * Spelled out rather than `Object.hasOwn`, which needs an es2022 lib.
+ */
+export function hasOwn<G extends object>(
+  group: G,
+  driver: PropertyKey,
+): driver is keyof G {
+  return Object.prototype.hasOwnProperty.call(group, driver);
+}

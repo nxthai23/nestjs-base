@@ -50,4 +50,15 @@ describe('StorageModule', () => {
       /Unknown STORAGE_DRIVER: dropbox/,
     );
   });
+
+  // See the same case in caching.module.spec.ts: a plain object lookup answers
+  // for Object.prototype too, so `constructor` slipped past the guard.
+  it.each(['constructor', 'toString', 'valueOf', 'hasOwnProperty'])(
+    'rejects %s rather than resolving it off Object.prototype',
+    async (driver) => {
+      await expect(compileWithDriver(driver)).rejects.toThrow(
+        new RegExp(`Unknown STORAGE_DRIVER: ${driver}`),
+      );
+    },
+  );
 });

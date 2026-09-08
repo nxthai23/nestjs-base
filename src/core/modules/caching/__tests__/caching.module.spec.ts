@@ -48,6 +48,20 @@ describe('CachingModule', () => {
     );
   });
 
+  // A plain object lookup also answers for everything on Object.prototype, so
+  // `constructor` used to pass the guard: `new Object(config)` returns the
+  // ConfigService itself, and the app booted with its own configuration
+  // standing in for the cache - every get quietly answering with a config
+  // value instead of a cached one.
+  it.each(['constructor', 'toString', 'valueOf', 'hasOwnProperty'])(
+    'rejects %s rather than resolving it off Object.prototype',
+    async (driver) => {
+      await expect(compileWithDriver(driver)).rejects.toThrow(
+        new RegExp(`Unknown CACHE_DRIVER: ${driver}`),
+      );
+    },
+  );
+
   it('exports the facade for feature code', async () => {
     const moduleRef = await compileWithDriver('memory');
 

@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CachingInterface } from '@libs/ports/caching.interface';
-import { CachingDriver, registry } from '@libs/registry';
+import { CachingDriver, hasOwn, registry } from '@libs/registry';
 import { CACHING_ADAPTER, CACHING_DEFAULTS } from './caching.constant';
 import { CachingService } from './caching.service';
 
@@ -23,11 +23,15 @@ export class CachingModule {
               'caching.driver',
               CACHING_DEFAULTS.driver,
             );
-            const Adapter = registry.caching[driver];
-            if (!Adapter) {
+            // An own-property check, not a truthiness one: a plain object
+            // answers for everything on Object.prototype, so `constructor`
+            // would otherwise pass the guard and hand back the ConfigService
+            // as the cache. (Object.hasOwn needs es2022; target here is
+            // es2020.)
+            if (!hasOwn(registry.caching, driver)) {
               throw new Error(`Unknown CACHE_DRIVER: ${driver}`);
             }
-            return new Adapter(config);
+            return new registry.caching[driver](config);
           },
         },
         CachingService,

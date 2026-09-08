@@ -35,10 +35,17 @@ export class MemoryService implements CachingInterface {
       'caching.ttl',
       CACHING_DEFAULTS.ttlSeconds,
     );
-    this.maxEntries = config.get<number>(
+    const configured = config.get<number>(
       'caching.maxEntries',
       CACHING_DEFAULTS.maxEntries,
     );
+    // A cap below 1 would make the eviction loop empty the Map and keep going,
+    // spinning against a key of undefined - an infinite loop holding the event
+    // loop. A cache that holds nothing is not a useful reading of the setting
+    // anyway, so the floor is one entry.
+    this.maxEntries = Number.isFinite(configured)
+      ? Math.max(1, Math.floor(configured))
+      : CACHING_DEFAULTS.maxEntries;
   }
 
   /** Live entry count, after eviction. Exposed for tests. */

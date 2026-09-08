@@ -160,6 +160,21 @@ describe('MemoryService', () => {
     await expect(cache.get('b')).resolves.toBeUndefined();
   });
 
+  // A cap below 1 used to spin forever: eviction emptied the Map, but
+  // `0 > -1` kept the loop running against a key of undefined, pinning the
+  // event loop and hanging the request that called set.
+  it.each([-1, 0, NaN])(
+    'still terminates, and still caches, when the cap is a nonsensical %s',
+    async (cap) => {
+      const cache = new MemoryService(makeCappedConfig(cap));
+
+      await cache.set('k', 'v');
+
+      expect(cache.size).toBe(1);
+      await expect(cache.get('k')).resolves.toBe('v');
+    },
+  );
+
   it('evicts expired entries as they are read instead of holding a timer', async () => {
     vi.useFakeTimers();
     const cache = new MemoryService(makeConfig());
