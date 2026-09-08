@@ -195,16 +195,28 @@ export class AvatarService {
 }
 ```
 
-**Large files are handled for you.** `putObject` uploads through the SDK's
-`Upload`, which sends a single `PutObject` while the body fits in one part and
-switches to a multipart upload past that — so callers never choose, and a
-stream is never buffered whole. A part that fails aborts the upload rather than
-leaving paid-for parts on the bucket.
+**Two upload methods — you pick, by case, not by size.**
 
-Defaults are 5 MB parts, 4 at a time, so an upload holds about 20 MB in memory
-regardless of file size. Tune with `S3_PART_SIZE_MB` / `S3_UPLOAD_CONCURRENCY`
-(and the `R2_*` equivalents); part size is floored at 5 MB because S3 rejects
-anything smaller for any part but the last.
+| | `putObject` | `putLargeObject` |
+|---|---|---|
+| Requests | one | create + N parts + complete |
+| Memory | the whole body | `part size x concurrency` (20 MB by default) |
+| Ceiling | 5 GB (S3's single-PUT cap) | 5 TB |
+| On failure | nothing to clean up | aborts, so no billed parts are left |
+| Use for | avatars, thumbnails, generated documents | video, archives, anything streamed off a request |
+
+Nothing switches between them behind your back. The code doing the upload knows
+whether it is handling an avatar or a video; the storage layer does not, so it
+does not guess.
+
+```typescript
+await this.storage.putObject({ key, body: file.buffer, contentType });
+await this.storage.putLargeObject({ key, body: request, contentType });
+```
+
+`S3_PART_SIZE_MB` / `S3_UPLOAD_CONCURRENCY` (and the `R2_*` equivalents) tune
+how `putLargeObject` chops the body — they are not a threshold. Part size is
+floored at 5 MB because S3 rejects anything smaller for any part but the last.
 
 Keys are chosen by the caller, so re-uploading the same key overwrites in place
 instead of leaving orphaned objects. URLs are never persisted: they are signed

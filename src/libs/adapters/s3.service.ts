@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl as presign } from '@aws-sdk/s3-request-presigner';
@@ -76,17 +77,33 @@ export class S3Service implements StorageInterface {
     };
   }
 
-  /**
-   * Uploads through `Upload`, which sends a single PutObject while the body
-   * fits in one part and switches to a multipart upload past that — so a
-   * caller never chooses, and a stream is never buffered whole.
-   *
-   * Memory is bounded at `concurrency * partSize` (20 MB by default), and a
-   * part that fails aborts the upload rather than leaving paid-for parts on
-   * the bucket.
-   */
+  /** One request. See the port for when to prefer this over putLargeObject. */
   async putObject(input: PutObjectInput): Promise<{ key: string }> {
     await this.execute('putObject', input.key, () =>
+      this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: input.key,
+          Body: input.body,
+          ContentType: input.contentType,
+        }),
+      ),
+    );
+    return { key: input.key };
+  }
+
+  /**
+   * Multipart, via the SDK's `Upload`: the body is chopped into `partSize`
+   * chunks and `concurrency` of them travel at once, so memory stays at
+   * `partSize * concurrency` whatever the file weighs.
+   *
+   * `leavePartsOnError` stays at its default of false, so a failure aborts the
+   * upload — parts already accepted by the bucket are billed until a lifecycle
+   * rule reaps them, and an abandoned upload is not something a caller can see
+   * to clean up.
+   */
+  async putLargeObject(input: PutObjectInput): Promise<{ key: string }> {
+    await this.execute('putLargeObject', input.key, () =>
       new Upload({
         client: this.client,
         partSize: this.partSize,

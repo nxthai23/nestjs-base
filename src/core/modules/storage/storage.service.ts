@@ -20,6 +20,10 @@ export class StorageService implements StorageInterface {
     return this.adapter.putObject(input);
   }
 
+  putLargeObject(input: PutObjectInput): Promise<{ key: string }> {
+    return this.adapter.putLargeObject(input);
+  }
+
   deleteObject(key: string): Promise<void> {
     return this.adapter.deleteObject(key);
   }

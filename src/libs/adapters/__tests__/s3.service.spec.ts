@@ -154,34 +154,41 @@ describe('S3Service', () => {
   });
 
   /**
-   * S3 caps a single PUT at 5 GB, and buffering a large file to send it that
-   * way costs its whole size in memory. Multipart splits the body into parts
-   * uploaded concurrently, so a stream is never held whole - and a part that
-   * fails is retried on its own rather than restarting the upload.
+   * Two entry points, chosen by the caller rather than by a size threshold in
+   * here: the code doing the upload knows whether it is handling an avatar or
+   * a video, and this layer does not.
    */
-  describe('large bodies', () => {
-    it('still sends one PutObject for a body below the part size', async () => {
+  describe('putObject — one request', () => {
+    it('sends a single PutObject even for a body that would fit several parts', async () => {
       const { commands } = stubMultipartFlow();
       const s3 = new S3Service(makeConfig());
 
-      await s3.putObject({ key: 'small.png', body: Buffer.alloc(1024) });
+      await s3.putObject({ key: 'video.mp4', body: largeStream(12) });
 
       expect(commandsOfType(commands, PutObjectCommand)).toHaveLength(1);
       expect(
         commandsOfType(commands, CreateMultipartUploadCommand),
       ).toHaveLength(0);
     });
+  });
 
-    it('splits a body past the part size into a multipart upload', async () => {
+  /**
+   * S3 caps a single PUT at 5 GB, and buffering a large file to send it that
+   * way costs its whole size in memory. Multipart splits the body into parts
+   * uploaded concurrently, so a stream is never held whole - and a part that
+   * fails is retried on its own rather than restarting the upload.
+   */
+  describe('putLargeObject — multipart', () => {
+    it('splits the body into parts', async () => {
       const { commands } = stubMultipartFlow();
       const s3 = new S3Service(makeConfig());
 
-      await s3.putObject({ key: 'video.mp4', body: largeStream(12) });
+      await s3.putLargeObject({ key: 'video.mp4', body: largeStream(12) });
 
       expect(
         commandsOfType(commands, CreateMultipartUploadCommand),
       ).toHaveLength(1);
-      // 12 MB at the 5 MB default: 5 + 5 + 2.
+      // 12 MB at the 5 MB default chunk: 5 + 5 + 2.
       expect(commandsOfType(commands, UploadPartCommand)).toHaveLength(3);
       expect(
         commandsOfType(commands, CompleteMultipartUploadCommand),
@@ -193,7 +200,7 @@ describe('S3Service', () => {
       const { commands } = stubMultipartFlow();
       const s3 = new S3Service(makeConfig());
 
-      await s3.putObject({ key: 'video.mp4', body: largeStream(12) });
+      await s3.putLargeObject({ key: 'video.mp4', body: largeStream(12) });
 
       const parts = commandsOfType(commands, UploadPartCommand)
         .map((command) => command.input.PartNumber)
@@ -205,7 +212,7 @@ describe('S3Service', () => {
       const { commands } = stubMultipartFlow();
       const s3 = new S3Service(makeConfig());
 
-      await s3.putObject({
+      await s3.putLargeObject({
         key: 'video.mp4',
         body: largeStream(6),
         contentType: 'video/mp4',
@@ -219,13 +226,24 @@ describe('S3Service', () => {
       });
     });
 
-    it('returns the key, the same as a single-part upload', async () => {
+    it('returns the key, the same as putObject', async () => {
       stubMultipartFlow();
       const s3 = new S3Service(makeConfig());
 
       await expect(
-        s3.putObject({ key: 'video.mp4', body: largeStream(6) }),
+        s3.putLargeObject({ key: 'video.mp4', body: largeStream(6) }),
       ).resolves.toEqual({ key: 'video.mp4' });
+    });
+
+    // Small bodies are the caller misjudging, not an error: one part is legal
+    // as the last part, so this still succeeds rather than failing loudly.
+    it('still succeeds when the body turns out to fit in one part', async () => {
+      stubMultipartFlow();
+      const s3 = new S3Service(makeConfig());
+
+      await expect(
+        s3.putLargeObject({ key: 'small.png', body: Buffer.alloc(1024) }),
+      ).resolves.toEqual({ key: 'small.png' });
     });
 
     // A failed multipart leaves its uploaded parts on the bucket, still
@@ -235,12 +253,12 @@ describe('S3Service', () => {
       const s3 = new S3Service(makeConfig());
 
       const failure = await s3
-        .putObject({ key: 'video.mp4', body: largeStream(12) })
+        .putLargeObject({ key: 'video.mp4', body: largeStream(12) })
         .catch((error: unknown) => error);
 
       expect(failure).toBeInstanceOf(StorageError);
       expect(failure).toMatchObject({
-        operation: 'putObject',
+        operation: 'putLargeObject',
         key: 'video.mp4',
       });
       expect(
@@ -251,13 +269,13 @@ describe('S3Service', () => {
       ).toHaveLength(0);
     });
 
-    it('takes the part size from configuration', async () => {
+    it('takes the chunk size from configuration', async () => {
       const { commands } = stubMultipartFlow();
       const s3 = new S3Service(makeConfig({ partSizeMb: 10 }));
 
-      await s3.putObject({ key: 'video.mp4', body: largeStream(12) });
+      await s3.putLargeObject({ key: 'video.mp4', body: largeStream(12) });
 
-      // 12 MB at a 10 MB part size: 10 + 2.
+      // 12 MB at a 10 MB chunk: 10 + 2.
       expect(commandsOfType(commands, UploadPartCommand)).toHaveLength(2);
     });
 
@@ -267,7 +285,7 @@ describe('S3Service', () => {
       const { commands } = stubMultipartFlow();
       const s3 = new S3Service(makeConfig({ partSizeMb: 1 }));
 
-      await s3.putObject({ key: 'video.mp4', body: largeStream(12) });
+      await s3.putLargeObject({ key: 'video.mp4', body: largeStream(12) });
 
       expect(commandsOfType(commands, UploadPartCommand)).toHaveLength(3);
     });

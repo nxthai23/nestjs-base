@@ -74,7 +74,7 @@ describe('R2Service', () => {
       Array.from({ length: 12 }, () => Buffer.alloc(1024 * 1024, 'x')),
     );
 
-    await r2.putObject({ key: 'video.mp4', body });
+    await r2.putLargeObject({ key: 'video.mp4', body });
 
     const parts = commands.filter(
       (command) => command instanceof UploadPartCommand,
