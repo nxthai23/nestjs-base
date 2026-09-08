@@ -4,6 +4,7 @@
  */
 
 import { CACHING_DEFAULTS } from '@libs/ports/caching.interface';
+import { MAIL_DEFAULTS } from '@libs/ports/mail.interface';
 import { STORAGE_DEFAULTS } from '@libs/ports/storage.interface';
 
 export default () => ({
@@ -52,6 +53,20 @@ export default () => ({
       servers: process.env.MEMCACHED_SERVERS, // "host:11211,host2:11211"
       username: process.env.MEMCACHED_USERNAME,
       password: process.env.MEMCACHED_PASSWORD,
+    },
+  },
+  mail: {
+    // 'log' | 'ses' | 'sendgrid'
+    driver: process.env.MAIL_DRIVER || MAIL_DEFAULTS.driver,
+    // Default sender; a message may override it.
+    from: process.env.MAIL_FROM,
+    ses: {
+      region: process.env.SES_REGION,
+      accessKeyId: process.env.SES_ACCESS_KEY_ID,
+      secretAccessKey: process.env.SES_SECRET_ACCESS_KEY,
+    },
+    sendgrid: {
+      apiKey: process.env.SENDGRID_API_KEY,
     },
   },
   isEnableSeeder: parseInt(process.env.ENABLE_SEEDER) || 0,

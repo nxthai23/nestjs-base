@@ -87,6 +87,15 @@ Currently applied to:
   `CachingService` does not expose `clear`: the drivers implement it as a full
   flush that no prefix scopes, so it stays on the adapter for tests.
 
+- **mail** — `MailService`, with `LogMailService` / `SesService` /
+  `SendgridService` selected via `MAIL_DRIVER` (default `log`, which writes to
+  the log and sends nothing). Registered globally in `app.module.ts`. The
+  facade normalises addresses, applies `MAIL_FROM`, and rejects a message with
+  no recipient/subject/body before any provider sees it. Unlike caching it does
+  **not** fail open — a send that fails throws. No templating or attachments in
+  the port: templates are rendered in the app and sent as HTML, so swapping
+  driver never means rebuilding them.
+
 Logging and RBAC deliberately still call their libraries directly — add a port
 when a second implementation actually appears, not before.
 
@@ -122,3 +131,6 @@ Copy `env.example` to `.env` (or use the existing `.env`). Key variables:
 - `CACHE_KEY_PREFIX` — prepended to every cache key; set it when the cache server is shared between apps or environments (default empty)
 - `CACHE_MAX_ENTRIES` — memory driver only: entries held before the least recently used is evicted (default `10000`)
 - `REDIS_URL` — required only when `CACHE_DRIVER=redis`
+- `MAIL_DRIVER` — `log` (default, sends nothing), `ses` or `sendgrid`
+- `MAIL_FROM` — default sender; required for ses/sendgrid, which both reject an
+  unverified sender

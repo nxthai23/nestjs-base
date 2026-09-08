@@ -13,6 +13,7 @@ import configuration from './config/configuration';
 import { APP_PIPE } from '@nestjs/core';
 import { DatabaseConfig } from './core/database/database';
 import { CachingModule } from '@core/modules/caching/caching.module';
+import { MailModule } from '@core/modules/mail/mail.module';
 import { AppConfigModule } from './api/app-config/app-config.module';
 import { SeederModule } from '@core/database/seeder/seeder.module';
 import { LoggerModule } from 'nestjs-pino';
@@ -36,6 +37,9 @@ import { loggerConfig } from '@core/modules/logger/pino.config';
     // Global. Driver comes from CACHE_DRIVER and defaults to in-memory, so
     // this boots with no cache configuration at all.
     CachingModule.forRootAsync(),
+    // Global. Driver comes from MAIL_DRIVER and defaults to the log driver,
+    // so this boots with no provider credentials and sends nothing.
+    MailModule.forRootAsync(),
     AppConfigModule,
   ],
   providers: [

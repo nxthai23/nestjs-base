@@ -4,6 +4,9 @@ import { MemoryService } from './adapters/memory.service';
 import { RedisService } from './adapters/redis.service';
 import { ValkeyService } from './adapters/valkey.service';
 import { MemcachedService } from './adapters/memcached.service';
+import { LogMailService } from './adapters/log-mail.service';
+import { SesService } from './adapters/ses.service';
+import { SendgridService } from './adapters/sendgrid.service';
 
 /**
  * The only file allowed to import from `./adapters`. Everything else depends
@@ -21,10 +24,16 @@ export const registry = {
     valkey: ValkeyService,
     memcached: MemcachedService,
   },
+  mail: {
+    log: LogMailService,
+    ses: SesService,
+    sendgrid: SendgridService,
+  },
 } as const;
 
 export type StorageDriver = keyof typeof registry.storage;
 export type CachingDriver = keyof typeof registry.caching;
+export type MailDriver = keyof typeof registry.mail;
 
 /**
  * Whether a driver name is actually registered.

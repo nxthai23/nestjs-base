@@ -21,3 +21,7 @@ data:
   # Domain a SIWE signature must be bound to. Empty means the check is off —
   # set it before exposing SIWE login. Nothing wires SiweService yet.
   APP_DOMAIN: ''
+  # No provider wired here, so mail is logged rather than sent. Point this at
+  # ses or sendgrid and add the credentials to secret.yaml.
+  MAIL_DRIVER: 'log'
+  MAIL_FROM: 'no-reply@example.com'

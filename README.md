@@ -284,6 +284,57 @@ Memcached adapter also rejects a TTL over 30 days (memcached would read it as
 an absolute 1970 timestamp) and keys over 250 bytes, rather than failing
 obscurely at runtime.
 
+### Mail (Log / SES / SendGrid)
+
+Same layout again: `src/libs/ports/mail.interface.ts` holds the contract,
+`src/libs/adapters/` the providers (`log-mail`, `ses`, `sendgrid`), and
+`src/libs/registry.ts` maps a driver name to its adapter.
+
+```
+MAIL_DRIVER=log                    # log | ses | sendgrid
+MAIL_FROM=no-reply@example.com     # default sender; a message may override it
+```
+
+`log` is the default: it writes the message to the log and sends nothing, so
+the app boots with no provider credentials and a developer running against
+production data cannot mail real users by accident. The module is registered in
+`app.module.ts` and global — just inject `MailService`:
+
+```typescript
+import { MailService } from '@core/modules/mail/mail.service';
+
+@Injectable()
+export class PasswordResetService {
+  constructor(private readonly mail: MailService) {}
+
+  async send(user: User, link: string) {
+    const { messageId } = await this.mail.send({
+      to: user.email,
+      subject: 'Reset your password',
+      html: renderResetEmail({ name: user.name, link }),
+      replyTo: 'support@example.com',
+    });
+    return messageId;
+  }
+}
+```
+
+`to`, `cc`, `bcc` and `replyTo` each take one address or a list. `MailService`
+normalises them, fills in `MAIL_FROM`, and rejects a message with no recipient,
+no subject or no body before any provider sees it — so the two drivers behave
+the same and fail the same way.
+
+**Mail does not fail open.** Unlike the cache, a send that fails throws: a
+password-reset mail that never went out has to reach the caller as an error,
+not a log line. Adapter failures arrive as `MailError` carrying `operation`,
+`recipient` and the original `cause`.
+
+**No templating in the port.** Render your template in the app and pass HTML.
+SES and SendGrid both have template systems, but they live in different places
+and take different data — putting them in the port would mean rebuilding every
+template to change provider. Attachments are out for the same kind of reason:
+SendGrid takes them directly, SES needs the message rebuilt as raw MIME.
+
 ## Claude PR Review
 
 Pull requests targeting `dev` are automatically reviewed by Claude via the
