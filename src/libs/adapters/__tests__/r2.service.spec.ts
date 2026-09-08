@@ -1,5 +1,11 @@
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
+import {
+  CreateMultipartUploadCommand,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3';
 import { R2Service } from '../r2.service';
 
 function makeConfig(overrides: Record<string, unknown> = {}) {
@@ -42,6 +48,40 @@ describe('R2Service', () => {
 
     expect(url).toContain('abc123.r2.cloudflarestorage.com');
     expect(url).toContain('X-Amz-Signature=');
+  });
+
+  // R2 speaks S3 multipart, so a large body takes the same path here. Its
+  // checksum support differs from AWS though - CRC-32 is COMPOSITE-only, the
+  // shape multipart produces - so this is worth pinning rather than assuming.
+  it('splits a large body into a multipart upload against the R2 endpoint', async () => {
+    const commands: unknown[] = [];
+    vi.spyOn(S3Client.prototype, 'send').mockImplementation(
+      (command: unknown) => {
+        commands.push(command);
+        if (command instanceof CreateMultipartUploadCommand) {
+          return Promise.resolve({ UploadId: 'upload-1' }) as never;
+        }
+        if (command instanceof UploadPartCommand) {
+          return Promise.resolve({
+            ETag: `"etag-${command.input.PartNumber}"`,
+          }) as never;
+        }
+        return Promise.resolve({}) as never;
+      },
+    );
+    const r2 = new R2Service(makeConfig());
+    const body = Readable.from(
+      Array.from({ length: 12 }, () => Buffer.alloc(1024 * 1024, 'x')),
+    );
+
+    await r2.putObject({ key: 'video.mp4', body });
+
+    const parts = commands.filter(
+      (command) => command instanceof UploadPartCommand,
+    );
+    expect(parts).toHaveLength(3);
+    const endpoint = await clientOf(r2).config.endpoint!();
+    expect(endpoint.hostname).toBe('abc123.r2.cloudflarestorage.com');
   });
 
   it('uploads through the same S3-compatible implementation as the S3 adapter', async () => {

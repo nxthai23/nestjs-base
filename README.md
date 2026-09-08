@@ -195,6 +195,17 @@ export class AvatarService {
 }
 ```
 
+**Large files are handled for you.** `putObject` uploads through the SDK's
+`Upload`, which sends a single `PutObject` while the body fits in one part and
+switches to a multipart upload past that — so callers never choose, and a
+stream is never buffered whole. A part that fails aborts the upload rather than
+leaving paid-for parts on the bucket.
+
+Defaults are 5 MB parts, 4 at a time, so an upload holds about 20 MB in memory
+regardless of file size. Tune with `S3_PART_SIZE_MB` / `S3_UPLOAD_CONCURRENCY`
+(and the `R2_*` equivalents); part size is floored at 5 MB because S3 rejects
+anything smaller for any part but the last.
+
 Keys are chosen by the caller, so re-uploading the same key overwrites in place
 instead of leaving orphaned objects. URLs are never persisted: they are signed
 per request, so they keep working after a bucket, domain or provider change.

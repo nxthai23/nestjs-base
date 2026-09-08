@@ -62,12 +62,19 @@ export default () => ({
       region: process.env.S3_REGION,
       accessKeyId: process.env.S3_ACCESS_KEY_ID,
       secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+      // Multipart tuning; omit both to take the SDK-matching defaults.
+      partSizeMb: parseInt(process.env.S3_PART_SIZE_MB) || undefined,
+      uploadConcurrency:
+        parseInt(process.env.S3_UPLOAD_CONCURRENCY) || undefined,
     },
     r2: {
       bucket: process.env.R2_BUCKET,
       accountId: process.env.R2_ACCOUNT_ID,
       accessKeyId: process.env.R2_ACCESS_KEY_ID,
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      partSizeMb: parseInt(process.env.R2_PART_SIZE_MB) || undefined,
+      uploadConcurrency:
+        parseInt(process.env.R2_UPLOAD_CONCURRENCY) || undefined,
     },
   },
 });

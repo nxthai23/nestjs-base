@@ -31,4 +31,14 @@ export class StorageError extends Error {
 /** See CACHING_DEFAULTS: one definition, referenced by config and by module. */
 export const STORAGE_DEFAULTS = {
   driver: 's3',
+  /**
+   * Bytes per multipart part. 5 MB is the protocol minimum for every part but
+   * the last, and also the SDK's own default.
+   */
+  partSizeBytes: 5 * 1024 * 1024,
+  /**
+   * Parts in flight at once. The uploader holds at most
+   * `uploadConcurrency * partSizeBytes` in memory - 20 MB at these defaults.
+   */
+  uploadConcurrency: 4,
 } as const;

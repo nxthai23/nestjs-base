@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Options, S3Service } from './s3.service';
+import { mb, S3Options, S3Service } from './s3.service';
 
 /**
  * Cloudflare R2 speaks the S3 API, so it reuses the S3 implementation and
@@ -18,6 +18,8 @@ export class R2Service extends S3Service {
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       region: 'auto',
       forcePathStyle: true,
+      partSize: mb(config.get<number>('storage.r2.partSizeMb')),
+      concurrency: config.get<number>('storage.r2.uploadConcurrency'),
     };
   }
 }

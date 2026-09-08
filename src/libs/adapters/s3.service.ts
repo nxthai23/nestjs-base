@@ -4,12 +4,13 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl as presign } from '@aws-sdk/s3-request-presigner';
+import { Upload } from '@aws-sdk/lib-storage';
 import {
   PutObjectInput,
+  STORAGE_DEFAULTS,
   StorageError,
   StorageInterface,
 } from '@libs/ports/storage.interface';
@@ -21,17 +22,37 @@ export interface S3Options {
   secretAccessKey: string;
   endpoint?: string;
   forcePathStyle?: boolean;
+  /** Bytes per multipart part. Floored at 5 MB, the protocol minimum. */
+  partSize?: number;
+  /** Parts uploaded at once. Bounds memory at concurrency * partSize. */
+  concurrency?: number;
 }
+
+/**
+ * S3 rejects any part but the last below 5 MB, so a smaller setting would not
+ * make uploads finer-grained - it would fail them.
+ */
+const MIN_PART_SIZE_BYTES = 5 * 1024 * 1024;
 
 @Injectable()
 export class S3Service implements StorageInterface {
   protected readonly client: S3Client;
   protected readonly bucket: string;
+  protected readonly partSize: number;
+  protected readonly concurrency: number;
 
   constructor(config: ConfigService) {
     const options = this.readOptions(config);
 
     this.bucket = options.bucket;
+    this.partSize = Math.max(
+      MIN_PART_SIZE_BYTES,
+      options.partSize ?? STORAGE_DEFAULTS.partSizeBytes,
+    );
+    this.concurrency = Math.max(
+      1,
+      options.concurrency ?? STORAGE_DEFAULTS.uploadConcurrency,
+    );
     this.client = new S3Client({
       region: options.region,
       endpoint: options.endpoint,
@@ -50,19 +71,33 @@ export class S3Service implements StorageInterface {
       region: config.getOrThrow<string>('storage.s3.region'),
       accessKeyId: config.getOrThrow<string>('storage.s3.accessKeyId'),
       secretAccessKey: config.getOrThrow<string>('storage.s3.secretAccessKey'),
+      partSize: mb(config.get<number>('storage.s3.partSizeMb')),
+      concurrency: config.get<number>('storage.s3.uploadConcurrency'),
     };
   }
 
+  /**
+   * Uploads through `Upload`, which sends a single PutObject while the body
+   * fits in one part and switches to a multipart upload past that — so a
+   * caller never chooses, and a stream is never buffered whole.
+   *
+   * Memory is bounded at `concurrency * partSize` (20 MB by default), and a
+   * part that fails aborts the upload rather than leaving paid-for parts on
+   * the bucket.
+   */
   async putObject(input: PutObjectInput): Promise<{ key: string }> {
     await this.execute('putObject', input.key, () =>
-      this.client.send(
-        new PutObjectCommand({
+      new Upload({
+        client: this.client,
+        partSize: this.partSize,
+        queueSize: this.concurrency,
+        params: {
           Bucket: this.bucket,
           Key: input.key,
           Body: input.body,
           ContentType: input.contentType,
-        }),
-      ),
+        },
+      }).done(),
     );
     return { key: input.key };
   }
@@ -120,4 +155,9 @@ function isNotFound(error: unknown): boolean {
     name === 'NotFound' ||
     name === 'NoSuchKey'
   );
+}
+
+/** Config carries part size in MB; the SDK wants bytes. */
+export function mb(value: number | undefined): number | undefined {
+  return value === undefined ? undefined : value * 1024 * 1024;
 }

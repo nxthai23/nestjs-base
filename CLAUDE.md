@@ -69,7 +69,10 @@ Currently applied to:
 
 - **storage** — `StorageService`, with `S3Service` / `R2Service` selected via
   `STORAGE_DRIVER`. Not yet registered in `app.module.ts`: its adapters call
-  `getOrThrow` for credentials, so it waits for the first consumer.
+  `getOrThrow` for credentials, so it waits for the first consumer. `putObject`
+  goes through `@aws-sdk/lib-storage`'s `Upload`, so a body past the part size
+  becomes a multipart upload automatically — the port has no separate
+  multipart API, and callers pass a stream for large files.
 - **caching** — `CachingService`, with `MemoryService` / `RedisService` /
   `ValkeyService` / `MemcachedService` selected via `CACHE_DRIVER` (default
   `memory`). Registered globally in `app.module.ts`. TTLs are in **seconds**.
