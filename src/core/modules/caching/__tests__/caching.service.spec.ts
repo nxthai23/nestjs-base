@@ -212,13 +212,14 @@ describe('CachingService', () => {
       expect(adapter.has).toHaveBeenCalledWith('k');
     });
 
-    it('passes clear to the adapter', async () => {
-      const adapter = makeFakeAdapter();
-      const caching = await build(adapter);
+    // clear() is deliberately absent from the facade: on a shared cache
+    // server the drivers implement it as FLUSHDB, which takes every other
+    // app's and environment's keys with it - the prefix does not scope it.
+    // Tests that need a blank slate hold the adapter and can call it there.
+    it('offers no clear, so feature code cannot flush a shared cache', async () => {
+      const caching = await build(makeFakeAdapter());
 
-      await caching.clear();
-
-      expect(adapter.clear).toHaveBeenCalled();
+      expect(caching).not.toHaveProperty('clear');
     });
   });
 
@@ -258,12 +259,6 @@ describe('CachingService', () => {
       const caching = await build(makeBrokenAdapter(outage));
 
       await expect(caching.delete('k')).resolves.toBeUndefined();
-    });
-
-    it('swallows a failed clear', async () => {
-      const caching = await build(makeBrokenAdapter(outage));
-
-      await expect(caching.clear()).resolves.toBeUndefined();
     });
 
     it('logs every degraded operation, so an outage is invisible in responses but not in logs', async () => {

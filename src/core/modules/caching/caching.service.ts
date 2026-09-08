@@ -24,9 +24,15 @@ import { CACHING_ADAPTER, CACHING_DEFAULTS } from './caching.constant';
  * than write raw keys: the cache is a single shared map, and two features that
  * pick the same identifier - a wallet address, a user id - otherwise overwrite
  * each other with nothing to warn them.
+ *
+ * `clear` is the one port method it does not expose. The prefix does not scope
+ * it: the drivers implement it as FLUSHDB, which drops the whole logical
+ * database - every other app and environment sharing that server included.
+ * That is a test affordance, not something feature code should be able to
+ * reach for, so it stays on the adapter.
  */
 @Injectable()
-export class CachingService implements CachingInterface {
+export class CachingService implements NamespacedCache {
   private readonly logger = new Logger(CachingService.name);
 
   /** Prepended to every key. Empty unless CACHE_KEY_PREFIX is configured. */
@@ -111,10 +117,6 @@ export class CachingService implements CachingInterface {
       () => this.adapter.has(qualified),
       false,
     );
-  }
-
-  clear(): Promise<void> {
-    return this.degrade('clear', '*', () => this.adapter.clear(), undefined);
   }
 
   private qualify(key: string): string {

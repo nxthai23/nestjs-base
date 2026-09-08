@@ -76,6 +76,8 @@ Currently applied to:
   The cache is one shared map, so feature code takes a namespace
   (`caching.namespace('siwe:nonce')`) rather than writing raw keys;
   `CACHE_KEY_PREFIX` sits underneath that, for a shared cache server.
+  `CachingService` does not expose `clear`: the drivers implement it as a full
+  flush that no prefix scopes, so it stays on the adapter for tests.
 
 Logging and RBAC deliberately still call their libraries directly — add a port
 when a second implementation actually appears, not before.

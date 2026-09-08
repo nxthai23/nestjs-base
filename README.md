@@ -249,6 +249,11 @@ logged at `error` level and the request continues without a cache. A broken
 cache makes things slower, never a 500 — which also means it is invisible in
 responses, so `GET /health` is what tells you the cache is down.
 
+`CachingService` exposes `get` / `set` / `delete` / `has` / `namespace` — but
+not `clear`. The drivers implement `clear` as a full flush, which
+`CACHE_KEY_PREFIX` does not scope, so on a shared cache server it would take
+every other app and environment with it. It stays on the adapter, for tests.
+
 The port is deliberately the intersection of what all four drivers can do.
 Memcached has no sorted sets, pipelines or `SCAN`, so those are not caching
 features — a leaderboard or sliding-window counter needs its own port. The

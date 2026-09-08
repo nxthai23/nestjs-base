@@ -23,8 +23,11 @@ export interface CachingInterface {
 
   /**
    * Wipes everything the driver owns. On a shared Redis this is FLUSHDB and
-   * clears the whole logical database, not just this app's keys — intended as
-   * a test affordance.
+   * clears the whole logical database, not just this app's keys — `CACHE_KEY_PREFIX`
+   * does not scope it.
+   *
+   * Deliberately not re-exposed by `CachingService`, so feature code cannot
+   * reach it: hold an adapter directly if you need a blank slate in a test.
    */
   clear(): Promise<void>;
 }
@@ -34,9 +37,14 @@ export interface CachingInterface {
  * qualified before they reach a driver, so two features cannot land on the
  * same key by picking the same identifier.
  *
- * `clear` is deliberately absent. Wiping one namespace means enumerating its
- * keys, and memcached has no SCAN - the port is the intersection of what every
- * driver can do, so offering it here would be a promise only some drivers keep.
+ * `clear` is deliberately absent, for two reasons. Wiping one namespace means
+ * enumerating its keys, and memcached has no SCAN - the port is the
+ * intersection of what every driver can do, so offering it here would be a
+ * promise only some drivers keep. And the unscoped `clear` it would otherwise
+ * delegate to takes the whole server with it.
+ *
+ * `CachingService` implements this rather than the full port for the same
+ * reason.
  */
 export type NamespacedCache = Omit<CachingInterface, 'clear'>;
 
