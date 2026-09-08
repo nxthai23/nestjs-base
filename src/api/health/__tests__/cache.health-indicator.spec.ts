@@ -36,6 +36,27 @@ function brokenAdapter(): CachingInterface {
   };
 }
 
+/** Records every write, so a test can see what was probed. */
+function recordingCache() {
+  const writes: { key: string; value: unknown }[] = [];
+  const store = new Map<string, unknown>();
+
+  const adapter: CachingInterface = {
+    get: async <T>(key: string) => store.get(key) as T | undefined,
+    set: async (key: string, value: unknown) => {
+      writes.push({ key, value });
+      store.set(key, value);
+    },
+    delete: async (key: string) => {
+      store.delete(key);
+    },
+    has: async (key: string) => store.has(key),
+    clear: async () => store.clear(),
+  };
+
+  return { adapter, writes };
+}
+
 describe('CacheHealthIndicator', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -48,6 +69,54 @@ describe('CacheHealthIndicator', () => {
 
     expect(result.cache.status).toBe('up');
     expect(result.cache.latencyMs).toEqual(expect.any(Number));
+  });
+
+  // Every instance used to probe the same `__health__` key, so two replicas
+  // sharing a Redis overwrote each other's probe between set and get and the
+  // check reported a healthy cache as down.
+  it('probes a key of its own rather than one every instance shares', async () => {
+    const { adapter, writes } = recordingCache();
+    const indicator = await build(adapter);
+
+    await indicator.isHealthy('cache');
+    await indicator.isHealthy('cache');
+
+    expect(new Set(writes.map((write) => write.key)).size).toBe(2);
+  });
+
+  it('cleans up after itself instead of leaving a key per check behind', async () => {
+    const { adapter, writes } = recordingCache();
+    const indicator = await build(adapter);
+
+    await indicator.isHealthy('cache');
+
+    await expect(adapter.has(writes[0].key)).resolves.toBe(false);
+  });
+
+  it('still reports up when tidying the probe away fails', async () => {
+    const { adapter } = recordingCache();
+    adapter.delete = vi.fn().mockRejectedValue(new Error('DEL refused'));
+    const indicator = await build(adapter);
+
+    const result = await indicator.isHealthy('cache');
+
+    expect(result.cache.status).toBe('up');
+  });
+
+  // The probe value was Date.now(), so two probes inside the same millisecond
+  // carried identical payloads - which is why a fixed key looked harmless in
+  // testing: overwriting a probe with a byte-identical one hides the clash.
+  it('writes a distinguishable probe even for two checks in the same millisecond', async () => {
+    vi.useFakeTimers();
+    const { adapter, writes } = recordingCache();
+    const indicator = await build(adapter);
+
+    await indicator.isHealthy('cache');
+    await indicator.isHealthy('cache');
+
+    expect(writes).toHaveLength(2);
+    expect(writes[0].value).not.toEqual(writes[1].value);
+    vi.useRealTimers();
   });
 
   it('names the driver it actually checked', async () => {
