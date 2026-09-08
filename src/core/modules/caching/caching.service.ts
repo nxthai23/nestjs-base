@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  CACHING_DEFAULTS,
   CachingInterface,
   NamespacedCache,
 } from '@libs/ports/caching.interface';
-import { CACHING_ADAPTER, CACHING_DEFAULTS } from './caching.constant';
+import { CACHING_ADAPTER } from './caching.constant';
 
 /**
  * The caching entry point for the rest of the app.

@@ -1,8 +1,11 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { StorageInterface } from '@libs/ports/storage.interface';
+import {
+  STORAGE_DEFAULTS,
+  StorageInterface,
+} from '@libs/ports/storage.interface';
 import { hasOwn, registry, StorageDriver } from '@libs/registry';
-import { STORAGE_ADAPTER, STORAGE_DEFAULTS } from './storage.constant';
+import { STORAGE_ADAPTER } from './storage.constant';
 import { StorageService } from './storage.service';
 
 @Module({})

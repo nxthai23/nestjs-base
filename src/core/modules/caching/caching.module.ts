@@ -1,8 +1,11 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CachingInterface } from '@libs/ports/caching.interface';
+import {
+  CACHING_DEFAULTS,
+  CachingInterface,
+} from '@libs/ports/caching.interface';
 import { CachingDriver, hasOwn, registry } from '@libs/registry';
-import { CACHING_ADAPTER, CACHING_DEFAULTS } from './caching.constant';
+import { CACHING_ADAPTER } from './caching.constant';
 import { CachingService } from './caching.service';
 
 @Module({})

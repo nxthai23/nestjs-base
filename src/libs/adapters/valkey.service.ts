@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisOptions, RedisService } from './redis.service';
-import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
+import { CACHING_DEFAULTS } from '@libs/ports/caching.interface';
 
 /**
  * Valkey is a fork of Redis 7.2 and speaks the same wire protocol, so it

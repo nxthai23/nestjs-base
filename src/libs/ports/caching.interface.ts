@@ -58,3 +58,25 @@ export class CachingError extends Error {
     this.name = 'CachingError';
   }
 }
+
+/**
+ * The single definition of what caching does without configuration.
+ *
+ * It lives beside the port, not in the core module: adapters need it too, and
+ * an adapter reaching up into `core/` inverts the dependency the architecture
+ * is built on - `core` composes `libs`, never the other way round.
+ *
+ * `configuration.ts` applies these to the config object, so in a running app
+ * every key is present. The fallbacks at each read site exist for tests and
+ * for anyone composing `CachingModule` by hand - which is also why the module
+ * boots with no cache configuration at all.
+ */
+export const CACHING_DEFAULTS = {
+  driver: 'memory',
+  /** Entry lifetime, in seconds. */
+  ttlSeconds: 60,
+  /** Memory driver only: entries held before the coldest is evicted. */
+  maxEntries: 10000,
+  /** No deployment prefix unless one is configured. */
+  keyPrefix: '',
+} as const;

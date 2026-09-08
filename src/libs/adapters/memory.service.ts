@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CachingInterface } from '@libs/ports/caching.interface';
-import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
+import {
+  CACHING_DEFAULTS,
+  CachingInterface,
+} from '@libs/ports/caching.interface';
 
 interface Entry {
   /** Serialized, so callers cannot mutate a cached value in place. */

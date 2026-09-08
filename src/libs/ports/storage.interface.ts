@@ -27,3 +27,8 @@ export class StorageError extends Error {
     this.name = 'StorageError';
   }
 }
+
+/** See CACHING_DEFAULTS: one definition, referenced by config and by module. */
+export const STORAGE_DEFAULTS = {
+  driver: 's3',
+} as const;

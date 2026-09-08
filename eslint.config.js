@@ -44,4 +44,25 @@ module.exports = [
       'no-restricted-imports': 'off',
     },
   },
+  {
+    // libs is the lower layer: core composes it, never the other way round.
+    // Adapters reaching up into core/ for a shared constant is how that gets
+    // inverted, and it puts a cycle one import away.
+    files: ['src/libs/**/*.ts'],
+    ignores: ['**/__tests__/**', '**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@core/*', '@core/**', '**/core/*', '**/core/**'],
+              message:
+                'libs must not depend on core. Anything both layers need belongs in libs/ports.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

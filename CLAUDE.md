@@ -56,6 +56,10 @@ docker-compose up -d --build
 - `src/libs/registry.ts` — maps a driver name to its adapter class. **The only
   file allowed to import from `libs/adapters/`** (enforced by an ESLint
   `no-restricted-imports` rule).
+- Direction of dependency: **`core` composes `libs`, never the reverse.**
+  `libs/**` may not import `@core/*` (a second `no-restricted-imports` rule);
+  anything both layers need — driver defaults, for instance — belongs in
+  `libs/ports`.
 - `src/core/modules/<concern>/` — a `<concern>.service.ts` implementing the port
   by delegating to the wired adapter, plus a `<concern>.module.ts` whose
   `forRootAsync()` resolves the driver from config. Feature code injects the

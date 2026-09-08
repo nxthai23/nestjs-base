@@ -1,6 +1,6 @@
 import configuration from '../configuration';
-import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
-import { STORAGE_DEFAULTS } from '@core/modules/storage/storage.constant';
+import { CACHING_DEFAULTS } from '@libs/ports/caching.interface';
+import { STORAGE_DEFAULTS } from '@libs/ports/storage.interface';
 
 const VARS = [
   'CACHE_DRIVER',

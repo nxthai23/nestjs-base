@@ -1,8 +1,11 @@
 import { BeforeApplicationShutdown, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { CachingError, CachingInterface } from '@libs/ports/caching.interface';
-import { CACHING_DEFAULTS } from '@core/modules/caching/caching.constant';
+import {
+  CACHING_DEFAULTS,
+  CachingError,
+  CachingInterface,
+} from '@libs/ports/caching.interface';
 
 export interface RedisOptions {
   url: string;
