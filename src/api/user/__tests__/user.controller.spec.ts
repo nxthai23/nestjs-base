@@ -10,13 +10,13 @@ describe('UserController.fetch', () => {
     const items = [{ id: '1' }, { id: '2' }];
     const meta = { page: 1, limit: 10, total: 2, totalPages: 1 };
     const userService = {
-      paginate: vi.fn().mockResolvedValue({ items, meta }),
+      find: vi.fn().mockResolvedValue({ items, meta }),
     };
     const controller = makeController(userService);
 
     const result = await controller.fetch({});
 
-    expect(userService.paginate).toHaveBeenCalledWith({}, {});
+    expect(userService.find).toHaveBeenCalledWith({}, {});
     expect(result.success).toBe(true);
     expect(result.data).toBe(items);
     expect(result.meta).toEqual(meta);
@@ -24,7 +24,7 @@ describe('UserController.fetch', () => {
 
   it('forwards page/limit query params to the service', async () => {
     const userService = {
-      paginate: vi.fn().mockResolvedValue({
+      find: vi.fn().mockResolvedValue({
         items: [],
         meta: { page: 2, limit: 5, total: 0, totalPages: 0 },
       }),
@@ -33,9 +33,6 @@ describe('UserController.fetch', () => {
 
     await controller.fetch({ page: 2, limit: 5 });
 
-    expect(userService.paginate).toHaveBeenCalledWith(
-      {},
-      { page: 2, limit: 5 },
-    );
+    expect(userService.find).toHaveBeenCalledWith({}, { page: 2, limit: 5 });
   });
 });

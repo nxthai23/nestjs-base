@@ -7,19 +7,22 @@
 import { Populate, RequiredEntityData, EntityManager } from '@mikro-orm/core';
 import { Paginated } from '@core/response/api-result';
 
-export interface PaginationParams {
+export interface PaginationOptions<T> {
+  populate?: Populate<T, string>;
   page?: number;
   limit?: number;
 }
 
 export interface Read<T> {
   findById<IdType>(id: IdType, populate: Populate<T, string>): Promise<T | any>;
-  findAll(populate?: Populate<T, string>): Promise<T[]>;
-  find(filter: object, populate?: Populate<T, string>): Promise<T[]>;
-  paginate(
-    filter?: object,
-    params?: PaginationParams,
-    populate?: Populate<T, string>,
+  findAll(
+    options?: PaginationOptions<T>,
+    paginate?: boolean,
+  ): Promise<Paginated<T>>;
+  find(
+    filter: object,
+    options?: PaginationOptions<T>,
+    paginate?: boolean,
   ): Promise<Paginated<T>>;
   count(filter?: object): Promise<number>;
 }

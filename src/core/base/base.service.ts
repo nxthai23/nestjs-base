@@ -7,7 +7,7 @@ import {
   EntityName,
 } from '@mikro-orm/core';
 import type { MongoEntityManager } from '@mikro-orm/mongodb';
-import { IBaseService, PaginationParams } from './base.service.interface';
+import { IBaseService, PaginationOptions } from './base.service.interface';
 import { BaseEntity } from './base.entity';
 import { NotFoundException } from '@nestjs/common';
 import { Paginated } from '@core/response/api-result';
@@ -55,40 +55,45 @@ export abstract class BaseService<
     });
   }
 
-  async findAll(populate?: Populate<T, string>): Promise<T[]> {
-    return await this.repository.findAll({
-      populate,
-    });
-  }
-
-  async find(filter: object, populate?: Populate<T, string>): Promise<T[]> {
-    return await this.repository.find(filter, {
-      populate,
-    });
-  }
-
-  async paginate(
+  async find(
     filter: object = {},
-    params?: PaginationParams,
-    populate?: Populate<T, string>,
+    options?: PaginationOptions<T>,
+    paginate = true,
   ): Promise<Paginated<T>> {
-    const page = Math.max(Number(params?.page ?? DEFAULT_PAGE), 1);
-    const limit = Math.min(
-      Math.max(Number(params?.limit ?? DEFAULT_LIMIT), 1),
-      MAX_LIMIT,
-    );
-    const offset = (page - 1) * limit;
+    const page = paginate
+      ? Math.max(Number(options?.page ?? DEFAULT_PAGE), 1)
+      : 1;
+    const limit = paginate
+      ? Math.min(
+          Math.max(Number(options?.limit ?? DEFAULT_LIMIT), 1),
+          MAX_LIMIT,
+        )
+      : undefined;
+    const offset = paginate ? (page - 1) * (limit as number) : undefined;
 
     const [items, total] = await this.repository.findAndCount(filter, {
       limit,
       offset,
-      populate,
+      populate: options?.populate,
     });
 
+    const effectiveLimit = limit ?? total;
     return {
       items,
-      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      meta: {
+        page,
+        limit: effectiveLimit,
+        total,
+        totalPages: effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 0,
+      },
     };
+  }
+
+  async findAll(
+    options?: PaginationOptions<T>,
+    paginate = true,
+  ): Promise<Paginated<T>> {
+    return this.find({}, options, paginate);
   }
 
   async count(filter?: object): Promise<number> {

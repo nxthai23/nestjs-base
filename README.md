@@ -117,11 +117,11 @@ which produces:
 **Custom status code** (e.g. `201` on create): pass it as the third argument —
 `ApiResult.success(user, 'User created', HttpStatus.CREATED)`.
 
-**Paginated list responses:** `BaseService.paginate(filter, { page, limit })`
-pushes `LIMIT`/`OFFSET` into the query itself (via MikroORM's
-`findAndCount`) — it never fetches the whole table and slices in memory.
-Defaults to `page: 1`, `limit: 10` (capped at `limit: 100`). Pass its result
-straight to `ApiResult.paginated(items, meta)`:
+**Paginated list responses:** `BaseService.find(filter, options)` /
+`findAll(options)` push `LIMIT`/`OFFSET` into the query itself (via
+MikroORM's `findAndCount`) — they never fetch the whole table and slice in
+memory. Defaults to `page: 1`, `limit: 10` (capped at `limit: 100`). Pass the
+result straight to `ApiResult.paginated(items, meta)`:
 
 ```typescript
 import { ApiResult } from '@core/response/api-result';
@@ -129,10 +129,16 @@ import { PaginationQueryDto } from '@core/dto/pagination-query.dto';
 
 @Get()
 async fetch(@Query() query: PaginationQueryDto) {
-  const { items, meta } = await this.userService.paginate({}, query);
+  const { items, meta } = await this.userService.find({}, query);
   return ApiResult.paginated(items, meta, 'Users retrieved successfully');
 }
 ```
+
+**Escape hatch:** a trailing `paginate` argument (`find(filter, options,
+paginate)`, default `true`) fetches everything as a single page when passed
+`false` — e.g. `this.roleService.find({}, undefined, false)`. It's a
+code-level parameter only, never wired to a query DTO, so no API client can
+request an unbounded response.
 
 **Errors:** `HttpExceptionFilter` builds its response the same way, via
 `ApiResult.error(message, statusCode, path)` — you don't call this directly,

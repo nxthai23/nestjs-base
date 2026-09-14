@@ -35,7 +35,7 @@ export class UserController {
   @Get()
   @CheckPolicies((ability) => ability.can(Action.Read, 'all'))
   async fetch(@Query() query: PaginationQueryDto) {
-    const { items, meta } = await this.userService.paginate({}, query);
+    const { items, meta } = await this.userService.find({}, query);
     return ApiResult.paginated(items, meta, 'Users retrieved successfully');
   }
 
