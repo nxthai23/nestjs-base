@@ -7,9 +7,11 @@ import {
   EntityName,
 } from '@mikro-orm/core';
 import type { MongoEntityManager } from '@mikro-orm/mongodb';
-import { IBaseService } from './base.service.interface';
+import { IBaseService, PaginationOptions } from './base.service.interface';
 import { BaseEntity } from './base.entity';
 import { NotFoundException } from '@nestjs/common';
+import { Paginated } from '@core/response/api-result';
+import { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from './base.constant';
 
 /**
  * Base service class that implements common CRUD operations
@@ -53,16 +55,47 @@ export abstract class BaseService<
     });
   }
 
-  async findAll(populate?: Populate<T, string>): Promise<T[]> {
-    return await this.repository.findAll({
-      populate,
+  async find(
+    filter: object = {},
+    options?: PaginationOptions<T>,
+    paginate = true,
+  ): Promise<Paginated<T>> {
+    const page = paginate
+      ? Math.max(Number(options?.page ?? DEFAULT_PAGE), 1)
+      : 1;
+    const limit = paginate
+      ? Math.min(
+          Math.max(Number(options?.limit ?? DEFAULT_LIMIT), 1),
+          MAX_LIMIT,
+        )
+      : undefined;
+    const offset = paginate ? (page - 1) * (limit as number) : undefined;
+
+    const [items, total] = await this.repository.findAndCount(filter, {
+      limit,
+      offset,
+      populate: options?.populate,
     });
+
+    // meta.limit must be a number; when paginate is false, limit is
+    // undefined (no cap was applied), so report the actual result size.
+    const metaLimit = limit ?? total;
+    return {
+      items,
+      meta: {
+        page,
+        limit: metaLimit,
+        total,
+        totalPages: metaLimit > 0 ? Math.ceil(total / metaLimit) : 0,
+      },
+    };
   }
 
-  async find(filter: object, populate?: Populate<T, string>): Promise<T[]> {
-    return await this.repository.find(filter, {
-      populate,
-    });
+  async findAll(
+    options?: PaginationOptions<T>,
+    paginate = true,
+  ): Promise<Paginated<T>> {
+    return this.find({}, options, paginate);
   }
 
   async count(filter?: object): Promise<number> {

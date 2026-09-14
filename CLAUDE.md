@@ -38,7 +38,7 @@ docker-compose up -d --build
 
 ## Architecture
 
-**Repository Pattern**: All services extend `BaseService<T>` (`src/core/base/base.service.ts`) which provides standard CRUD (find, create, update, delete, upsert, bulkCreate) backed by MikroORM's `EntityRepository`. Entities extend `BaseEntity` (`src/core/base/base.entity.ts`) which adds `id` (string), `createdAt`, `updatedAt`.
+**Repository Pattern**: All services extend `BaseService<T>` (`src/core/base/base.service.ts`) which provides standard CRUD (find, create, update, delete, upsert, bulkCreate) backed by MikroORM's `EntityRepository`. Entities extend `BaseEntity` (`src/core/base/base.entity.ts`) which adds `id` (string), `createdAt`, `updatedAt`. `find(filter, options, paginate)` / `findAll(options, paginate)` are paginated by default — they push `LIMIT`/`OFFSET` into the query via MikroORM's `findAndCount` (default `page: 1`, `limit: 10`, hard-capped at `limit: 100`) and always return `Paginated<T>` (`{ items, meta }`, from `core/response/api-result.ts`) for use with `ApiResult.paginated()`. `options: { page?, limit?, populate? }` controls how; the trailing `paginate` boolean (default `true`) controls whether — pass `false` only from internal code (seeders, scripts) that genuinely needs everything, never from a query DTO.
 
 **Module structure** — each feature in `src/api/<feature>/` contains:
 - `<feature>.module.ts` — NestJS module
