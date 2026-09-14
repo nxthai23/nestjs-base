@@ -117,18 +117,20 @@ which produces:
 **Custom status code** (e.g. `201` on create): pass it as the third argument —
 `ApiResult.success(user, 'User created', HttpStatus.CREATED)`.
 
-**Paginated list responses:** call `ApiResult.paginated(items, meta)`:
+**Paginated list responses:** `BaseService.paginate(filter, { page, limit })`
+pushes `LIMIT`/`OFFSET` into the query itself (via MikroORM's
+`findAndCount`) — it never fetches the whole table and slices in memory.
+Defaults to `page: 1`, `limit: 10` (capped at `limit: 100`). Pass its result
+straight to `ApiResult.paginated(items, meta)`:
 
 ```typescript
 import { ApiResult } from '@core/response/api-result';
+import { PaginationQueryDto } from '@core/dto/pagination-query.dto';
 
-async fetch(page: number, limit: number) {
-  const [items, total] = await Promise.all([
-    this.userService.find({}, undefined),
-    this.userService.count({}),
-  ]);
-  const meta = { page, limit, total, totalPages: Math.ceil(total / limit) };
-  return ApiResult.paginated(items, meta);
+@Get()
+async fetch(@Query() query: PaginationQueryDto) {
+  const { items, meta } = await this.userService.paginate({}, query);
+  return ApiResult.paginated(items, meta, 'Users retrieved successfully');
 }
 ```
 

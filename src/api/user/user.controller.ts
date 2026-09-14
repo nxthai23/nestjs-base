@@ -4,6 +4,7 @@ import {
   Body,
   Patch,
   Delete,
+  Query,
   UseGuards,
   UseInterceptors,
   SerializeOptions,
@@ -19,6 +20,7 @@ import { Action } from '@core/casl/action.enum';
 import { UserSerialize } from './interceptor/user.interceptor';
 import { HttpExceptionFilter } from '@/core/filter/http-exception.filter';
 import { ApiResult } from '@core/response/api-result';
+import { PaginationQueryDto } from '@core/dto/pagination-query.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, PoliciesGuard)
@@ -32,9 +34,9 @@ export class UserController {
 
   @Get()
   @CheckPolicies((ability) => ability.can(Action.Read, 'all'))
-  async fetch() {
-    const users = await this.userService.findAll();
-    return ApiResult.success(users, 'Users retrieved successfully');
+  async fetch(@Query() query: PaginationQueryDto) {
+    const { items, meta } = await this.userService.paginate({}, query);
+    return ApiResult.paginated(items, meta, 'Users retrieved successfully');
   }
 
   @Get('/me')

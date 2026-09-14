@@ -7,9 +7,10 @@ import {
   EntityName,
 } from '@mikro-orm/core';
 import type { MongoEntityManager } from '@mikro-orm/mongodb';
-import { IBaseService } from './base.service.interface';
+import { IBaseService, PaginationParams } from './base.service.interface';
 import { BaseEntity } from './base.entity';
 import { NotFoundException } from '@nestjs/common';
+import { Paginated } from '@core/response/api-result';
 
 /**
  * Base service class that implements common CRUD operations
@@ -63,6 +64,34 @@ export abstract class BaseService<
     return await this.repository.find(filter, {
       populate,
     });
+  }
+
+  protected static readonly DEFAULT_PAGE = 1;
+  protected static readonly DEFAULT_LIMIT = 10;
+  protected static readonly MAX_LIMIT = 100;
+
+  async paginate(
+    filter: object = {},
+    params?: PaginationParams,
+    populate?: Populate<T, string>,
+  ): Promise<Paginated<T>> {
+    const page = Math.max(Number(params?.page ?? BaseService.DEFAULT_PAGE), 1);
+    const limit = Math.min(
+      Math.max(Number(params?.limit ?? BaseService.DEFAULT_LIMIT), 1),
+      BaseService.MAX_LIMIT,
+    );
+    const offset = (page - 1) * limit;
+
+    const [items, total] = await this.repository.findAndCount(filter, {
+      limit,
+      offset,
+      populate,
+    });
+
+    return {
+      items,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async count(filter?: object): Promise<number> {

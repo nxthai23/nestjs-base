@@ -64,9 +64,9 @@ async paginate(
   params?: PaginationParams,
   populate?: Populate<T, string>,
 ): Promise<Paginated<T>> {
-  const page = Math.max(params?.page ?? BaseService.DEFAULT_PAGE, 1);
+  const page = Math.max(Number(params?.page ?? BaseService.DEFAULT_PAGE), 1);
   const limit = Math.min(
-    Math.max(params?.limit ?? BaseService.DEFAULT_LIMIT, 1),
+    Math.max(Number(params?.limit ?? BaseService.DEFAULT_LIMIT), 1),
     BaseService.MAX_LIMIT,
   );
   const offset = (page - 1) * limit;
@@ -95,6 +95,15 @@ async paginate(
 - Defaults: `page=1`, `limit=10`, matching what was asked for.
 - `Math.ceil(total / limit)` is `0` when `total` is `0` — correct, zero pages
   for zero rows.
+- `Number(...)` wraps both inputs explicitly rather than relying on
+  `Math.max`/`Math.min`'s implicit numeric coercion of whatever `params.page`/
+  `params.limit` actually are. This matters because `AppModule`'s global
+  `ValidationPipe` is registered with no options (`useClass: ValidationPipe`,
+  so `transform` defaults to `false`) — a `@Query()` DTO is validated but
+  *not* transformed into real numbers before reaching the controller, so a
+  querystring `?page=2` arrives as the string `"2"`. `paginate()` shouldn't
+  assume its caller already coerced types, since it is meant to be reused by
+  any future controller.
 
 ## `IBaseService` (`src/core/base/base.service.interface.ts`)
 
@@ -110,9 +119,9 @@ paginate(
 
 ## `UserController.fetch()` (`src/api/user/user.controller.ts`)
 
-Add a `PaginationQueryDto` (`src/api/user/dto/pagination-query.dto.ts`,
-reusable by any future list endpoint) with `class-validator` decorators
-matching the module's existing DTO convention:
+Add a `PaginationQueryDto` under `src/core/dto/pagination-query.dto.ts` — a
+cross-cutting concern shared by any future list endpoint, so it lives beside
+`core/response/api-result.ts` rather than inside one feature's `dto/` folder:
 
 ```ts
 export class PaginationQueryDto {
