@@ -11,6 +11,7 @@ import { IBaseService, PaginationParams } from './base.service.interface';
 import { BaseEntity } from './base.entity';
 import { NotFoundException } from '@nestjs/common';
 import { Paginated } from '@core/response/api-result';
+import { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from './base.constant';
 
 /**
  * Base service class that implements common CRUD operations
@@ -66,19 +67,15 @@ export abstract class BaseService<
     });
   }
 
-  protected static readonly DEFAULT_PAGE = 1;
-  protected static readonly DEFAULT_LIMIT = 10;
-  protected static readonly MAX_LIMIT = 100;
-
   async paginate(
     filter: object = {},
     params?: PaginationParams,
     populate?: Populate<T, string>,
   ): Promise<Paginated<T>> {
-    const page = Math.max(Number(params?.page ?? BaseService.DEFAULT_PAGE), 1);
+    const page = Math.max(Number(params?.page ?? DEFAULT_PAGE), 1);
     const limit = Math.min(
-      Math.max(Number(params?.limit ?? BaseService.DEFAULT_LIMIT), 1),
-      BaseService.MAX_LIMIT,
+      Math.max(Number(params?.limit ?? DEFAULT_LIMIT), 1),
+      MAX_LIMIT,
     );
     const offset = (page - 1) * limit;
 

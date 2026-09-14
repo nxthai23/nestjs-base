@@ -52,22 +52,31 @@ export interface PaginationParams {
 }
 ```
 
+## `src/core/base/base.constant.ts` (new)
+
+```ts
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_LIMIT = 10;
+export const MAX_LIMIT = 100;
+```
+
+Kept out of `base.service.ts` — they're plain config values, not behavior, so
+a separate constants file keeps the service body focused on logic.
+
 ## `BaseService.paginate()` (`src/core/base/base.service.ts`)
 
 ```ts
-protected static readonly DEFAULT_PAGE = 1;
-protected static readonly DEFAULT_LIMIT = 10;
-protected static readonly MAX_LIMIT = 100;
+import { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from './base.constant';
 
 async paginate(
   filter: object = {},
   params?: PaginationParams,
   populate?: Populate<T, string>,
 ): Promise<Paginated<T>> {
-  const page = Math.max(Number(params?.page ?? BaseService.DEFAULT_PAGE), 1);
+  const page = Math.max(Number(params?.page ?? DEFAULT_PAGE), 1);
   const limit = Math.min(
-    Math.max(Number(params?.limit ?? BaseService.DEFAULT_LIMIT), 1),
-    BaseService.MAX_LIMIT,
+    Math.max(Number(params?.limit ?? DEFAULT_LIMIT), 1),
+    MAX_LIMIT,
   );
   const offset = (page - 1) * limit;
 
