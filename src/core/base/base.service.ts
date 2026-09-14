@@ -77,14 +77,16 @@ export abstract class BaseService<
       populate: options?.populate,
     });
 
-    const effectiveLimit = limit ?? total;
+    // meta.limit must be a number; when paginate is false, limit is
+    // undefined (no cap was applied), so report the actual result size.
+    const metaLimit = limit ?? total;
     return {
       items,
       meta: {
         page,
-        limit: effectiveLimit,
+        limit: metaLimit,
         total,
-        totalPages: effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 0,
+        totalPages: metaLimit > 0 ? Math.ceil(total / metaLimit) : 0,
       },
     };
   }
