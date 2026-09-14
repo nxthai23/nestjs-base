@@ -2,6 +2,18 @@
 
 Date: 2026-09-14
 
+## Revision note
+
+First version of this spec added `paginate()` as a new method sitting
+*alongside* unbounded `find()`/`findAll()`. Revised same day, before merge:
+a sibling method is a foot-gun — any future `FooService extends BaseService`
+can still call the inherited `find()`/`findAll()` directly and reintroduce
+the exact unbounded-fetch bug this work exists to close, simply by not
+knowing `paginate()` is the one to use. This revision merges pagination
+*into* `find()`/`findAll()` themselves, on by default, with an explicit
+`paginate: false` flag as the escape hatch for the few callers that
+genuinely want everything. The rest of this doc describes the revised design.
+
 ## Purpose
 
 `BaseService.find()` / `findAll()` (`src/core/base/base.service.ts:56-66`) take
@@ -17,42 +29,46 @@ The bug the user identified: pagination must happen **at the query**, not by
 slicing an array after fetching everything. `ApiResult.paginated(items, meta)`
 already takes pre-sliced `items` + a `meta` describing them — it is a
 response-shape formatter, not where pagination logic runs, and it stays that
-way. What's missing is a `BaseService` method that asks the database for one
-page (`LIMIT`/`OFFSET` pushed into the query) instead of fetching everything
-and paginating in memory.
+way. What's missing is DB-level pagination (`LIMIT`/`OFFSET` pushed into the
+query) built into the methods every feature service inherits, not opt-in.
 
-## Decision: additive, not a breaking change
+## Decision: merge into find/findAll, on by default, flag to opt out
 
-Considered replacing `find`/`findAll`'s signature and return type outright vs.
-adding a new method. Chose to **add `paginate()` alongside the existing
-`find`/`findAll`**, which stay unbounded T[] as-is:
-
-- `find`/`findAll` remain useful for small/bounded lookups (e.g.
-  `app-config`'s active-public-configs list) and internal service-to-service
-  calls that need a plain array, not a page.
-- Changing their return type to `Paginated<T>` would be a breaking change for
-  every current and future caller, forcing an `.items` unwrap even where
-  nobody wants pagination semantics.
-- Blast radius check: `UserController.fetch()` is the *only* current caller
-  of `BaseService.findAll()`/`find()` in the app layer today (seeders use
-  `em.find()` directly; `app-config.service.ts` calls the repository
-  directly, bypassing `BaseService`) — so today nothing breaks either way,
-  but additive keeps the contract stable for services written later.
+- `find(filter, options)` / `findAll(options)` now always return
+  `Paginated<T>` (`{ items, meta }`), built from a single `findAndCount`
+  query. Default `page: 1`, `limit: 10`, capped at `limit: 100`.
+- `options.paginate === false` is the escape hatch: skips `limit`/`offset`
+  entirely (fetch everything), and `meta` reports it as one page
+  (`page: 1`, `limit: total`, `totalPages: total > 0 ? 1 : 0`) — so the
+  return shape stays `Paginated<T>` either way, no union type.
+- The escape hatch is a **code-level flag only** — it is never wired to
+  `PaginationQueryDto`/the HTTP layer, so no API client can ask for
+  everything. It exists for internal callers (seeders, admin scripts,
+  a genuinely small/bounded collection) that call `BaseService` methods
+  directly.
+- Blast radius: `find`/`findAll` have no callers left in the app today —
+  `UserController.fetch()` (the only one) is updated as part of this same
+  change; `app-config.service.ts` calls the repository directly, bypassing
+  `BaseService`; seeders use `em.find()` directly. Zero other call sites to
+  migrate, so this is effectively free to do now and much cheaper than
+  discovering the foot-gun after other services depend on the old shape.
 
 ## New types (`src/core/base/base.service.interface.ts`)
 
 Reuse `PaginationMeta`/`Paginated<T>` already defined in
-`src/core/response/api-result.ts` — one pagination shape for the whole app,
-not a second one local to `BaseService`.
+`src/core/response/api-result.ts` — one pagination shape for the whole app.
 
 ```ts
-export interface PaginationParams {
+export interface FindOptions<T> {
+  populate?: Populate<T, string>;
   page?: number;
   limit?: number;
+  /** false = skip limit/offset and return every match as one page. Default true. */
+  paginate?: boolean;
 }
 ```
 
-## `src/core/base/base.constant.ts` (new)
+## `src/core/base/base.constant.ts`
 
 ```ts
 export const DEFAULT_PAGE = 1;
@@ -60,139 +76,120 @@ export const DEFAULT_LIMIT = 10;
 export const MAX_LIMIT = 100;
 ```
 
-Kept out of `base.service.ts` — they're plain config values, not behavior, so
-a separate constants file keeps the service body focused on logic.
+Kept out of `base.service.ts` — plain config values, not behavior.
 
-## `BaseService.paginate()` (`src/core/base/base.service.ts`)
+## `BaseService.find()` / `findAll()` (`src/core/base/base.service.ts`)
 
 ```ts
 import { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from './base.constant';
 
-async paginate(
-  filter: object = {},
-  params?: PaginationParams,
-  populate?: Populate<T, string>,
-): Promise<Paginated<T>> {
-  const page = Math.max(Number(params?.page ?? DEFAULT_PAGE), 1);
-  const limit = Math.min(
-    Math.max(Number(params?.limit ?? DEFAULT_LIMIT), 1),
-    MAX_LIMIT,
-  );
-  const offset = (page - 1) * limit;
+async find(filter: object = {}, options?: FindOptions<T>): Promise<Paginated<T>> {
+  const paginate = options?.paginate ?? true;
+  const page = paginate ? Math.max(Number(options?.page ?? DEFAULT_PAGE), 1) : 1;
+  const limit = paginate
+    ? Math.min(Math.max(Number(options?.limit ?? DEFAULT_LIMIT), 1), MAX_LIMIT)
+    : undefined;
+  const offset = paginate ? (page - 1) * (limit as number) : undefined;
 
   const [items, total] = await this.repository.findAndCount(filter, {
     limit,
     offset,
-    populate,
+    populate: options?.populate,
   });
 
+  const effectiveLimit = limit ?? total;
   return {
     items,
-    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    meta: {
+      page,
+      limit: effectiveLimit,
+      total,
+      totalPages: effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 0,
+    },
   };
+}
+
+async findAll(options?: FindOptions<T>): Promise<Paginated<T>> {
+  return this.find({}, options);
 }
 ```
 
-- `findAndCount` pushes `LIMIT`/`OFFSET` into the single query on both drivers
+- `findAndCount` pushes `LIMIT`/`OFFSET` into a single query on both drivers
   (`EntityRepository.findAndCount` → `EntityManager.findAndCount`, confirmed
-  in `@mikro-orm/core`) — no separate `count()` round trip, no in-memory
-  slicing.
-- `page`/`limit` are clamped defensively: `page` floors at 1, `limit` floors
-  at 1 and caps at `MAX_LIMIT` (100) so a caller can't request the whole
-  table by passing `limit=999999` — that would defeat the purpose of adding
-  this method.
-- Defaults: `page=1`, `limit=10`, matching what was asked for.
-- `Math.ceil(total / limit)` is `0` when `total` is `0` — correct, zero pages
-  for zero rows.
+  in `@mikro-orm/core`); passing `limit`/`offset` as `undefined` (the
+  `paginate: false` branch) makes MikroORM skip them, so `findAndCount` also
+  serves as the "fetch everything, but still give me a count" path.
+  One code path, no branching duplication.
+- `page`/`limit` clamp defensively when `paginate` is on: `page` floors at 1;
+  `limit` floors at 1 and caps at `MAX_LIMIT` (100).
 - `Number(...)` wraps both inputs explicitly rather than relying on
-  `Math.max`/`Math.min`'s implicit numeric coercion of whatever `params.page`/
-  `params.limit` actually are. This matters because `AppModule`'s global
+  `Math.max`/`Math.min`'s implicit coercion of whatever `options.page`/
+  `options.limit` actually are. This matters because `AppModule`'s global
   `ValidationPipe` is registered with no options (`useClass: ValidationPipe`,
   so `transform` defaults to `false`) — a `@Query()` DTO is validated but
   *not* transformed into real numbers before reaching the controller, so a
-  querystring `?page=2` arrives as the string `"2"`. `paginate()` shouldn't
-  assume its caller already coerced types, since it is meant to be reused by
-  any future controller.
+  querystring `?page=2` arrives as the string `"2"`.
+- The standalone `paginate()` method from the first version of this spec is
+  removed — `find`/`findAll` *are* the paginated methods now, there is no
+  second name for the same thing.
 
 ## `IBaseService` (`src/core/base/base.service.interface.ts`)
 
-Add to the `Read<T>` interface:
-
 ```ts
-paginate(
-  filter?: object,
-  params?: PaginationParams,
-  populate?: Populate<T, string>,
-): Promise<Paginated<T>>;
+export interface Read<T> {
+  findById<IdType>(id: IdType, populate: Populate<T, string>): Promise<T | any>;
+  findAll(options?: FindOptions<T>): Promise<Paginated<T>>;
+  find(filter: object, options?: FindOptions<T>): Promise<Paginated<T>>;
+  count(filter?: object): Promise<number>;
+}
 ```
 
 ## `UserController.fetch()` (`src/api/user/user.controller.ts`)
 
-Add a `PaginationQueryDto` under `src/core/dto/pagination-query.dto.ts` — a
-cross-cutting concern shared by any future list endpoint, so it lives beside
-`core/response/api-result.ts` rather than inside one feature's `dto/` folder:
-
-```ts
-export class PaginationQueryDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit?: number;
-}
-```
-
-Controller change:
+`PaginationQueryDto` (`src/core/dto/pagination-query.dto.ts`) is unchanged —
+still just `{ page?, limit? }`, with no `paginate` field, so it can be passed
+straight through as `FindOptions<T>` without ever exposing the escape hatch
+over HTTP:
 
 ```ts
 @Get()
 @CheckPolicies((ability) => ability.can(Action.Read, 'all'))
 async fetch(@Query() query: PaginationQueryDto) {
-  const { items, meta } = await this.userService.paginate({}, query);
+  const { items, meta } = await this.userService.find({}, query);
   return ApiResult.paginated(items, meta, 'Users retrieved successfully');
 }
 ```
 
-`GET /users` now defaults to page 1 / 10 rows and accepts `?page=&limit=`
-instead of returning the whole table.
+`GET /users` still defaults to page 1 / 10 rows and accepts `?page=&limit=`.
 
 ## Testing
 
-- `src/core/base/__tests__/base.service.spec.ts` (new file — none exists
-  today): mock `EntityRepository.findAndCount`, assert:
-  - default params → `findAndCount` called with `{ limit: 10, offset: 0, populate: undefined }`
+- `src/core/base/__tests__/base.service.spec.ts` (rewritten): mock
+  `EntityRepository.findAndCount`, assert:
+  - default call → `findAndCount` called with `{ limit: 10, offset: 0, populate: undefined }`
   - `{ page: 3, limit: 20 }` → `{ limit: 20, offset: 40 }`
   - `limit` above `MAX_LIMIT` clamps to 100
   - `page: 0` / negative `page` clamps to 1
-  - `total: 0` → `meta.totalPages === 0`
-  - returned shape is `{ items, meta }` built from the mocked
-    `findAndCount` tuple
-- `src/api/user/__tests__/user.controller.spec.ts` (new — none exists today):
-  `fetch()` calls `userService.paginate({}, query)` and wraps the result via
-  `ApiResult.paginated`.
+  - numeric-string `page`/`limit` (unwrapped query values) still coerce correctly
+  - `{ paginate: false }` → `findAndCount` called with `limit: undefined, offset: undefined`; `meta` is `{ page: 1, limit: total, total, totalPages: 1 }` for a non-empty result and `totalPages: 0` for an empty one
+  - `findAll(options)` delegates to `find({}, options)`
+- `src/api/user/__tests__/user.controller.spec.ts`: `fetch()` calls
+  `userService.find({}, query)` and wraps the result via `ApiResult.paginated`.
 
 ## Docs
 
-- `README.md` — pagination example: show `paginate()` + `ApiResult.paginated()`
-  used together end-to-end (currently the README's pagination example, if
-  any, predates this method).
-- `CLAUDE.md` — note under the Repository Pattern paragraph that
-  `BaseService` also exposes `paginate()` for DB-level pagination, alongside
-  unbounded `find`/`findAll`.
+- `README.md` — pagination example updated to call `find()`/`findAll()`
+  directly (no separate `paginate()` name).
+- `CLAUDE.md` — Repository Pattern paragraph updated: `find`/`findAll` are
+  paginated by default (`page: 1`, `limit: 10`, capped at `100`), with a
+  `paginate: false` code-level escape hatch, not a public API toggle.
 
 ## Out of scope
 
-- No `orderBy` support on `paginate()` yet — none of the current callers need
-  sorting; add it if/when a real caller does (YAGNI).
-- No change to `find`/`findAll` signatures or behavior.
+- No `orderBy` support yet — none of the current callers need sorting; add
+  it if/when a real caller does (YAGNI).
 - No reintroduction of the removed `ResponseInterceptor` — pagination stays
   explicit via `ApiResult.paginated()`, per
   `2026-08-06-api-result-error-and-interceptor-removal-design.md`.
-- `app-config.service.ts`'s `findAllActivePublicConfigs()` stays unbounded —
-  it queries a small, operator-managed config table, not user-generated data.
+- `app-config.service.ts`'s `findAllActivePublicConfigs()` stays as a direct
+  repository call, unaffected — it never went through `BaseService`.
