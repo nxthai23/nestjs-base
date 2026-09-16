@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserService } from '@/api/user/user.service';
+import { AppException } from '@core/exceptions/app.exception';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -24,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       'role.permissions',
     ] as any);
     if (!user) {
-      throw new UnauthorizedException();
+      throw new AppException('AUTH_000');
     }
     return user;
   }

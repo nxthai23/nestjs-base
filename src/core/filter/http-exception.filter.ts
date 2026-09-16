@@ -7,6 +7,7 @@ import {
 import { Request, Response } from 'express';
 import { get } from 'lodash';
 import { ApiResult } from '../response/api-result';
+import { AppException } from '../exceptions/app.exception';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -20,7 +21,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       typeof exceptionResponse === 'string'
         ? exceptionResponse
         : get(exceptionResponse, 'message', 'Internal server error');
+    const code = exception instanceof AppException ? exception.code : undefined;
 
-    response.status(status).json(ApiResult.error(message, status, request.url));
+    response
+      .status(status)
+      .json(ApiResult.error(message, status, request.url, undefined, code));
   }
 }

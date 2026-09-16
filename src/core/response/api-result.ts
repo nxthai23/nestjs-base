@@ -1,4 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
+import { ErrorCode } from '../exceptions/error-codes';
 
 export interface PaginationMeta {
   page: number;
@@ -20,6 +21,7 @@ export class ApiResult<T = unknown> {
   readonly path?: string;
   readonly timestamp: string;
   readonly meta?: PaginationMeta;
+  readonly code?: ErrorCode;
 
   private constructor(partial: {
     success: boolean;
@@ -28,6 +30,7 @@ export class ApiResult<T = unknown> {
     data?: T;
     path?: string;
     meta?: PaginationMeta;
+    code?: ErrorCode;
   }) {
     this.success = partial.success;
     this.statusCode = partial.statusCode;
@@ -36,6 +39,7 @@ export class ApiResult<T = unknown> {
     this.path = partial.path;
     this.timestamp = new Date().toISOString();
     this.meta = partial.meta;
+    this.code = partial.code;
   }
 
   static success<T>(
@@ -66,6 +70,7 @@ export class ApiResult<T = unknown> {
     statusCode: number,
     path: string,
     data?: T,
+    code?: ErrorCode,
   ): ApiResult<T | null> {
     return new ApiResult<T | null>({
       success: false,
@@ -73,6 +78,7 @@ export class ApiResult<T = unknown> {
       message,
       path,
       data,
+      code,
     });
   }
 }

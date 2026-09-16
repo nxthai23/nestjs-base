@@ -108,8 +108,15 @@ when a second implementation actually appears, not before.
 - `@/*` → `src/*`
 
 **Cross-cutting concerns** (in `src/core/`):
-- `filter/http-exception.filter.ts` — global HTTP error filter; use with `@UseFilters(HttpExceptionFilter)` and **throw** errors (don't return them). Builds its response via `ApiResult.error(message, statusCode, path)`, emitting `{ success: false, statusCode, message, path, timestamp }`.
-- `response/api-result.ts` — `ApiResult<T>` response envelope (`success`, `statusCode`, `message`, `data`, `timestamp`, optional `meta`/`path`). Every controller builds its own envelope explicitly — there is no auto-wrapping interceptor — via `ApiResult.success(data, message?, statusCode?)`, `ApiResult.paginated(items, meta, message?, statusCode?)`, or `ApiResult.error(message, statusCode, path)`
+- `filter/http-exception.filter.ts` — global HTTP error filter; use with `@UseFilters(HttpExceptionFilter)` and **throw** errors (don't return them). Builds its response via `ApiResult.error(message, statusCode, path)`, emitting `{ success: false, statusCode, message, path, timestamp }`, plus `code` when the exception is an `AppException`.
+- `response/api-result.ts` — `ApiResult<T>` response envelope (`success`, `statusCode`, `message`, `data`, `timestamp`, optional `meta`/`path`/`code`). Every controller builds its own envelope explicitly — there is no auto-wrapping interceptor — via `ApiResult.success(data, message?, statusCode?)`, `ApiResult.paginated(items, meta, message?, statusCode?)`, or `ApiResult.error(message, statusCode, path)`
+- `exceptions/error-codes.ts` + `exceptions/app.exception.ts` — domain-prefixed
+  error codes (`AUTH_000`, ...). `ERROR_CODES` is a single `{ code, status,
+  message }[]` array — the only place a code gets appended — from which the
+  `ErrorCode` type and lookup are derived. Throw `new AppException(code)`
+  instead of a bare Nest exception to get a `code` in the response; only the
+  `auth` module is migrated so far, everything else still throws bare
+  exceptions and has no `code` in its error response.
 - `middlewares/logger.middleware.ts` — request logging (applied globally)
 - `decorators/current-user.decorator.ts` — `@CurrentUser()` param decorator
 - `docs/swagger.ts` — Swagger UI setup (served at `/api`)

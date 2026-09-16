@@ -1,4 +1,4 @@
-import { BadRequestException, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { generateNonce, SiweMessage } from 'siwe';
@@ -280,8 +280,8 @@ describe('SiweService', () => {
     ])('rejects a %s message as a bad request', async (_label, message) => {
       const { siwe } = await build();
 
-      await expect(siwe.verify(WALLET, '0xsig', message)).rejects.toThrow(
-        BadRequestException,
+      await expect(siwe.verify(WALLET, '0xsig', message)).rejects.toMatchObject(
+        { code: 'AUTH_002' },
       );
     });
 

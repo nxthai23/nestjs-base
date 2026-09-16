@@ -7,6 +7,7 @@ import {
 import type { Mock } from 'vitest';
 import { HttpExceptionFilter } from '../http-exception.filter';
 import { ApiResult } from '../../response/api-result';
+import { AppException } from '../../exceptions/app.exception';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
@@ -65,5 +66,29 @@ describe('HttpExceptionFilter', () => {
     expect(body.statusCode).toBe(HttpStatus.NOT_FOUND);
     expect(body.message).toBe('User not found');
     expect(body.path).toBe('/users/me');
+  });
+
+  it('includes the error code for an AppException', () => {
+    const exception = new AppException('AUTH_001');
+    const host = buildHost('/auth/login');
+
+    filter.catch(exception, host);
+
+    expect(statusMock).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+    const body = jsonMock.mock.calls[0][0];
+    expect(body.code).toBe('AUTH_001');
+    expect(body.message).toBe('Wrong password!');
+  });
+
+  it('omits the code for a bare HttpException', () => {
+    const exception = new HttpException('User not found', HttpStatus.NOT_FOUND);
+    const host = buildHost('/users/me');
+
+    filter.catch(exception, host);
+
+    const body = jsonMock.mock.calls[0][0];
+    expect(body.code).toBeUndefined();
+    const json = JSON.parse(JSON.stringify(body));
+    expect(json).not.toHaveProperty('code');
   });
 });

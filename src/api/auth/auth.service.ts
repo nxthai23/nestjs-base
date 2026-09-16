@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UserService } from '@/api/user/user.service';
 import { User } from '@/api/user/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '@/api/user/dto/create-user.dto';
 import { LoginResponse } from './dto/login.dto';
 import { JwtPayload } from './auth.type';
+import { AppException } from '@core/exceptions/app.exception';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +24,7 @@ export class AuthService {
     password: string,
   ): Promise<LoginResponse> {
     const user: User = await this.userService.findByUsername(username);
-    if (!user) throw new NotFoundException('User not found!');
+    if (!user) throw new AppException('USER_000');
     /**
      * Implement others auth strategies here
      */
