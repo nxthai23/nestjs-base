@@ -8,13 +8,13 @@ import { Populate, RequiredEntityData, EntityManager } from '@mikro-orm/core';
 import { Paginated } from '@core/response/api-result';
 
 export interface PaginationOptions<T> {
-  populate?: Populate<T, string>;
+  populate?: Populate<T, any>;
   page?: number;
   limit?: number;
 }
 
 export interface Read<T> {
-  findById<IdType>(id: IdType, populate: Populate<T, string>): Promise<T | any>;
+  findById<IdType>(id: IdType, populate: Populate<T, any>): Promise<T | any>;
   findAll(
     options?: PaginationOptions<T>,
     paginate?: boolean,
@@ -28,14 +28,14 @@ export interface Read<T> {
 }
 
 export interface Write<T> {
-  create(dto: RequiredEntityData<T>): Promise<Partial<T>>;
+  create(dto: RequiredEntityData<T>): Promise<T>;
   bulkCreate(dtos: RequiredEntityData<T>[]): Promise<boolean>;
-  update<IdType>(id: IdType, dto: Partial<T>): Promise<Partial<T>>;
-  delete<IdType>(id: IdType): Promise<Partial<T>>;
+  update<IdType>(id: IdType, dto: Partial<T>): Promise<T>;
+  delete<IdType>(id: IdType): Promise<T>;
   upsert<IdType>(
     id: IdType,
     dto: RequiredEntityData<T>,
-  ): Promise<{ entity: Partial<T>; created: boolean }>;
+  ): Promise<{ entity: T; created: boolean }>;
 }
 
 export interface Mixed {

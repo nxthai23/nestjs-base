@@ -48,10 +48,10 @@ export abstract class BaseService<
    */
   async findById<IdType>(
     id: IdType,
-    populate?: Populate<T, string>,
+    populate?: Populate<T, any>,
   ): Promise<T | any> {
     return await this.repository.findOne(id, {
-      populate,
+      populate: populate,
     });
   }
 
@@ -106,7 +106,7 @@ export abstract class BaseService<
    * Write section - Optimized for better performance
    */
 
-  async create(dto: RequiredEntityData<T>): Promise<Partial<T>> {
+  async create(dto: RequiredEntityData<T>): Promise<T> {
     const entity = this.repository.create(dto);
     // Use cached EntityManager and persist without immediate flush for better performance
     this.em.persist(entity);
@@ -130,7 +130,7 @@ export abstract class BaseService<
     return true;
   }
 
-  async update<IdType>(id: IdType, dto: Partial<T>): Promise<Partial<T>> {
+  async update<IdType>(id: IdType, dto: Partial<T>): Promise<T> {
     return await this.em.transactional(async (em) => {
       // Use reference for better performance if we don't need the full entity
       const entity = await this.repository.findOne(id);
@@ -141,11 +141,11 @@ export abstract class BaseService<
       // Assign new values using wrap for change tracking
       wrap(entity).assign(dto as any);
       await em.flush();
-      return entity as Partial<T>;
+      return entity;
     });
   }
 
-  async delete<IdType>(id: IdType): Promise<Partial<T>> {
+  async delete<IdType>(id: IdType): Promise<T> {
     return await this.em.transactional(async (em) => {
       const entity = await this.repository.findOne(id);
       if (!entity) {
@@ -154,14 +154,14 @@ export abstract class BaseService<
 
       em.remove(entity);
       await em.flush();
-      return entity as Partial<T>;
+      return entity;
     });
   }
 
   async upsert<IdType>(
     id: IdType,
     dto: RequiredEntityData<T>,
-  ): Promise<{ entity: Partial<T>; created: boolean }> {
+  ): Promise<{ entity: T; created: boolean }> {
     return await this.em.transactional(async (em) => {
       const existingEntity = await this.repository.findOne(id);
       let entity: T;
@@ -177,7 +177,7 @@ export abstract class BaseService<
       }
 
       await em.flush();
-      return { entity: entity as Partial<T>, created };
+      return { entity, created };
     });
   }
 
