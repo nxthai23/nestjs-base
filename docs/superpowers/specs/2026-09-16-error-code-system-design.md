@@ -48,49 +48,48 @@ i.e. any not-yet-migrated module keeps today's exact shape):
 
 ## Components
 
-### `src/core/exceptions/error-code.enum.ts` (new)
+### `src/core/exceptions/error-codes.ts` (new)
 
-One `ErrorCode` string enum, grouped by domain with a comment header per
-group — the single place new codes get appended:
+Single source of truth: one array of `{ code, status, message }` records,
+grouped by domain with a comment header per group — the only place new
+codes get appended. No enum, no separate lookup table to keep in sync by
+hand — `ErrorCode` (the type used everywhere else) and the lookup map are
+both *derived* from this one array:
 
 ```ts
-export enum ErrorCode {
+export const ERROR_CODES = [
   // AUTH — src/api/auth
-  AUTH_000 = 'AUTH_000',
-  AUTH_001 = 'AUTH_001',
-  AUTH_002 = 'AUTH_002',
-  AUTH_003 = 'AUTH_003',
-  AUTH_004 = 'AUTH_004',
-  AUTH_005 = 'AUTH_005',
-  AUTH_006 = 'AUTH_006',
-  AUTH_007 = 'AUTH_007',
+  { code: 'AUTH_000', status: HttpStatus.UNAUTHORIZED, message: 'Unauthorized' },
+  { code: 'AUTH_001', status: HttpStatus.UNAUTHORIZED, message: 'Wrong password!' },
+  { code: 'AUTH_002', status: HttpStatus.NOT_FOUND, message: 'User not found!' },
+  { code: 'AUTH_003', status: HttpStatus.BAD_REQUEST, message: 'Malformed SIWE message' },
+  { code: 'AUTH_004', status: HttpStatus.BAD_REQUEST, message: 'Nonce is missing' },
+  { code: 'AUTH_005', status: HttpStatus.BAD_REQUEST, message: 'Address mismatch' },
+  { code: 'AUTH_006', status: HttpStatus.BAD_REQUEST, message: 'Invalid nonce' },
+  { code: 'AUTH_007', status: HttpStatus.BAD_REQUEST, message: 'Invalid signature' },
+] as const satisfies { code: string; status: HttpStatus; message: string }[];
+
+export type ErrorCode = (typeof ERROR_CODES)[number]['code'];
+
+const ERROR_CODE_MAP = new Map(ERROR_CODES.map((e) => [e.code, e]));
+
+export function getErrorCode(code: ErrorCode) {
+  return ERROR_CODE_MAP.get(code)!;
 }
-```
-
-Codes are appended, never renumbered or reused — a retired code's number
-stays retired so old logs/clients aren't reinterpreted as a different error.
-
-### `src/core/exceptions/error-catalog.ts` (new)
-
-Maps each `ErrorCode` to its default `status` + `message`, so call sites
-that don't need a custom message just pass the code:
-
-```ts
-export const ERROR_CATALOG: Record<ErrorCode, { status: HttpStatus; message: string }> = {
-  [ErrorCode.AUTH_000]: { status: HttpStatus.UNAUTHORIZED, message: 'Unauthorized' },
-  [ErrorCode.AUTH_001]: { status: HttpStatus.UNAUTHORIZED, message: 'Wrong password!' },
-  [ErrorCode.AUTH_002]: { status: HttpStatus.NOT_FOUND, message: 'User not found!' },
-  [ErrorCode.AUTH_003]: { status: HttpStatus.BAD_REQUEST, message: 'Malformed SIWE message' },
-  [ErrorCode.AUTH_004]: { status: HttpStatus.BAD_REQUEST, message: 'Nonce is missing' },
-  [ErrorCode.AUTH_005]: { status: HttpStatus.BAD_REQUEST, message: 'Address mismatch' },
-  [ErrorCode.AUTH_006]: { status: HttpStatus.BAD_REQUEST, message: 'Invalid nonce' },
-  [ErrorCode.AUTH_007]: { status: HttpStatus.BAD_REQUEST, message: 'Invalid signature' },
-};
 ```
 
 Every status/message here matches what the current bare exception already
 throws (see mapping table below) — this pass is a like-for-like migration,
 not a behavior change.
+
+Adding a code later is a one-line append to `ERROR_CODES`; `ErrorCode`
+widens automatically since it's derived, not hand-maintained. TypeScript
+doesn't reject a duplicate `code` string on its own, so the module asserts
+uniqueness once at import time (`if (ERROR_CODES.length !== ERROR_CODE_MAP.size) throw ...`) —
+a copy-pasted entry with a stale code fails at boot, not silently at
+request time. Codes are appended, never renumbered or reused — a retired
+code's number stays retired so old logs/clients aren't reinterpreted as a
+different error.
 
 ### `src/core/exceptions/app.exception.ts` (new)
 
@@ -99,7 +98,7 @@ export class AppException extends HttpException {
   readonly code: ErrorCode;
 
   constructor(code: ErrorCode, message?: string, status?: HttpStatus) {
-    const entry = ERROR_CATALOG[code];
+    const entry = getErrorCode(code);
     super(message ?? entry.message, status ?? entry.status);
     this.code = code;
   }
@@ -144,24 +143,26 @@ response.status(status).json(ApiResult.error(message, status, request.url, undef
 ### Auth module call sites (updated)
 
 Each of the 7 bare-exception throws in `src/api/auth/` becomes
-`throw new AppException(ErrorCode.AUTH_xxx)`, using the catalog's default
-message/status (identical wording/status to today):
+`throw new AppException('AUTH_xxx')`, using the catalog's default
+message/status (identical wording/status to today). `ErrorCode` being a
+plain string-literal union means no import of an enum object is needed at
+call sites — just the type, inferred from the literal:
 
 | File:line | Current | New |
 |---|---|---|
-| `strategies/jwt.ts:27` | `UnauthorizedException()` | `AppException(ErrorCode.AUTH_000)` |
-| `strategies/local.ts:36` | `UnauthorizedException('Wrong password!')` | `AppException(ErrorCode.AUTH_001)` |
-| `auth.service.ts:26` | `NotFoundException('User not found!')` | `AppException(ErrorCode.AUTH_002)` |
-| `services/siwe.service.ts:87` | `BadRequestException('Malformed SIWE message')` | `AppException(ErrorCode.AUTH_003)` |
-| `services/siwe.service.ts:93` | `BadRequestException('Nonce is missing')` | `AppException(ErrorCode.AUTH_004)` |
-| `services/siwe.service.ts:103` | `BadRequestException('Address mismatch')` | `AppException(ErrorCode.AUTH_005)` |
-| `services/siwe.service.ts:111` | `BadRequestException('Invalid nonce')` | `AppException(ErrorCode.AUTH_006)` |
-| `services/siwe.service.ts:125` | `BadRequestException('Invalid signature')` | `AppException(ErrorCode.AUTH_007)` |
+| `strategies/jwt.ts:27` | `UnauthorizedException()` | `AppException('AUTH_000')` |
+| `strategies/local.ts:36` | `UnauthorizedException('Wrong password!')` | `AppException('AUTH_001')` |
+| `auth.service.ts:26` | `NotFoundException('User not found!')` | `AppException('AUTH_002')` |
+| `services/siwe.service.ts:87` | `BadRequestException('Malformed SIWE message')` | `AppException('AUTH_003')` |
+| `services/siwe.service.ts:93` | `BadRequestException('Nonce is missing')` | `AppException('AUTH_004')` |
+| `services/siwe.service.ts:103` | `BadRequestException('Address mismatch')` | `AppException('AUTH_005')` |
+| `services/siwe.service.ts:111` | `BadRequestException('Invalid nonce')` | `AppException('AUTH_006')` |
+| `services/siwe.service.ts:125` | `BadRequestException('Invalid signature')` | `AppException('AUTH_007')` |
 
 ## Data flow
 
 ```
-Controller/service throws AppException(ErrorCode.AUTH_xxx)
+Controller/service throws AppException('AUTH_xxx')
         │
         ▼
 HttpExceptionFilter — instanceof AppException → extracts .code
@@ -182,6 +183,8 @@ HttpExceptionFilter — not an AppException → code stays undefined
 
 Colocated under `__tests__/`, matching existing convention:
 
+- `src/core/exceptions/__tests__/error-codes.spec.ts` — every entry has a
+  unique `code`, `getErrorCode()` returns the right record.
 - `src/core/exceptions/__tests__/app.exception.spec.ts` — catalog defaults
   applied, message/status override, `instanceof HttpException`.
 - `src/core/filter/__tests__/http-exception.filter.spec.ts` — extend with
