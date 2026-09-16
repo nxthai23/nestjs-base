@@ -154,6 +154,35 @@ just `@UseFilters(HttpExceptionFilter)` and throw:
 }
 ```
 
+**Error codes:** a stable, domain-prefixed identifier (`AUTH_000`, ...) for
+consumers that want to key off something more precise than an HTTP status or
+a free-text message. Throw `AppException` from `@core/exceptions/app.exception`
+instead of a bare Nest exception, and `HttpExceptionFilter` adds a `code`
+field to the envelope:
+
+```typescript
+import { AppException } from '@core/exceptions/app.exception';
+
+if (!user) throw new AppException('AUTH_002');
+```
+
+```json
+{
+  "success": false,
+  "statusCode": 401,
+  "code": "AUTH_000",
+  "message": "Unauthorized",
+  "path": "/auth/login",
+  "timestamp": "2026-09-16T10:00:00.000Z"
+}
+```
+
+Codes and their default status/message live in one place,
+`src/core/exceptions/error-codes.ts` — append a new `{ code, status, message }`
+entry there, never renumber or reuse a retired one. Currently only the `auth`
+module is migrated; other modules still throw bare Nest exceptions and their
+error responses have no `code` field, same as before.
+
 ### File storage (S3 / R2)
 
 Storage follows the ports & adapters layout: the contract lives in

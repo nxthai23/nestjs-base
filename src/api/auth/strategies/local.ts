@@ -1,8 +1,9 @@
 import { Strategy } from 'passport-local';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
+import { AppException } from '@core/exceptions/app.exception';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
@@ -33,7 +34,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
       const isMatch = await bcrypt.compare(plainPassword, hashPassword);
       return isMatch;
     } catch {
-      throw new UnauthorizedException('Wrong password!');
+      throw new AppException('AUTH_001');
     }
   }
 }

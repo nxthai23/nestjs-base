@@ -90,6 +90,20 @@ describe('ApiResult', () => {
         timestamp: result.timestamp,
       });
     });
+
+    it('includes an error code when provided', () => {
+      const result = ApiResult.error(
+        'Wrong password!',
+        HttpStatus.UNAUTHORIZED,
+        '/auth/login',
+        undefined,
+        'AUTH_001',
+      );
+
+      expect(result.code).toBe('AUTH_001');
+      const json = JSON.parse(JSON.stringify(result));
+      expect(json.code).toBe('AUTH_001');
+    });
   });
 
   describe('success (serialized output)', () => {
