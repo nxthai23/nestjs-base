@@ -24,7 +24,7 @@ export class AuthService {
     password: string,
   ): Promise<LoginResponse> {
     const user: User = await this.userService.findByUsername(username);
-    if (!user) throw new AppException('AUTH_002');
+    if (!user) throw new AppException('USER_000');
     /**
      * Implement others auth strategies here
      */

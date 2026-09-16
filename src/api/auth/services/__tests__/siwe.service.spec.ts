@@ -281,7 +281,7 @@ describe('SiweService', () => {
       const { siwe } = await build();
 
       await expect(siwe.verify(WALLET, '0xsig', message)).rejects.toMatchObject(
-        { code: 'AUTH_003' },
+        { code: 'AUTH_002' },
       );
     });
 

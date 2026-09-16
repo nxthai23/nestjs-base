@@ -12,9 +12,9 @@ describe('AppException', () => {
   });
 
   it('lets the message be overridden while keeping the catalog status', () => {
-    const exception = new AppException('AUTH_002', 'Custom message');
+    const exception = new AppException('USER_000', 'Custom message');
 
-    expect(exception.code).toBe('AUTH_002');
+    expect(exception.code).toBe('USER_000');
     expect(exception.message).toBe('Custom message');
     expect(exception.getStatus()).toBe(HttpStatus.NOT_FOUND);
   });

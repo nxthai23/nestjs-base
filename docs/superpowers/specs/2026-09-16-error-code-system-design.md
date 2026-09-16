@@ -29,6 +29,15 @@ Confirmed with the repo owner before writing this spec:
   guard's forbidden): once migrated, they get a `COMMON_xxx` code of their
   own rather than borrowing a feature domain's prefix. Not part of this
   pass — see Out of scope.
+- **Code assignment is by resource, not by call site.** Revised after
+  review: `AuthService`'s "User not found!" (thrown while looking a user up
+  by username during login) is about the `User` entity being missing, not
+  about the login *process* failing — so it's `USER_000`, not an `AUTH_xxx`
+  code, even though the throw itself lives in `src/api/auth/`. The other 7
+  auth codes stay `AUTH_xxx`: wrong password, and every SIWE failure, are
+  about the authentication process itself (credential/signature/nonce
+  checks), not a missing resource. This is the one code in this pass that
+  isn't in the `auth` module's own domain — see the mapping table.
 
 ## Response shape
 
@@ -58,15 +67,16 @@ both *derived* from this one array:
 
 ```ts
 export const ERROR_CODES = [
-  // AUTH — src/api/auth
+  // AUTH — src/api/auth (the authentication process itself)
   { code: 'AUTH_000', status: HttpStatus.UNAUTHORIZED, message: 'Unauthorized' },
   { code: 'AUTH_001', status: HttpStatus.UNAUTHORIZED, message: 'Wrong password!' },
-  { code: 'AUTH_002', status: HttpStatus.NOT_FOUND, message: 'User not found!' },
-  { code: 'AUTH_003', status: HttpStatus.BAD_REQUEST, message: 'Malformed SIWE message' },
-  { code: 'AUTH_004', status: HttpStatus.BAD_REQUEST, message: 'Nonce is missing' },
-  { code: 'AUTH_005', status: HttpStatus.BAD_REQUEST, message: 'Address mismatch' },
-  { code: 'AUTH_006', status: HttpStatus.BAD_REQUEST, message: 'Invalid nonce' },
-  { code: 'AUTH_007', status: HttpStatus.BAD_REQUEST, message: 'Invalid signature' },
+  { code: 'AUTH_002', status: HttpStatus.BAD_REQUEST, message: 'Malformed SIWE message' },
+  { code: 'AUTH_003', status: HttpStatus.BAD_REQUEST, message: 'Nonce is missing' },
+  { code: 'AUTH_004', status: HttpStatus.BAD_REQUEST, message: 'Address mismatch' },
+  { code: 'AUTH_005', status: HttpStatus.BAD_REQUEST, message: 'Invalid nonce' },
+  { code: 'AUTH_006', status: HttpStatus.BAD_REQUEST, message: 'Invalid signature' },
+  // USER — the User entity itself, regardless of which flow looks it up
+  { code: 'USER_000', status: HttpStatus.NOT_FOUND, message: 'User not found!' },
 ] as const satisfies { code: string; status: HttpStatus; message: string }[];
 
 export type ErrorCode = (typeof ERROR_CODES)[number]['code'];
@@ -142,22 +152,25 @@ response.status(status).json(ApiResult.error(message, status, request.url, undef
 
 ### Auth module call sites (updated)
 
-Each of the 7 bare-exception throws in `src/api/auth/` becomes
-`throw new AppException('AUTH_xxx')`, using the catalog's default
+Each of the 8 bare-exception throws in `src/api/auth/` becomes
+`throw new AppException('XXX_xxx')`, using the catalog's default
 message/status (identical wording/status to today). `ErrorCode` being a
 plain string-literal union means no import of an enum object is needed at
-call sites — just the type, inferred from the literal:
+call sites — just the type, inferred from the literal. All but one land on
+an `AUTH_xxx` code — `auth.service.ts:26` gets `USER_000` instead, since
+it's the `User` entity that's missing, not the login process that failed
+(see Purpose):
 
 | File:line | Current | New |
 |---|---|---|
 | `strategies/jwt.ts:27` | `UnauthorizedException()` | `AppException('AUTH_000')` |
 | `strategies/local.ts:36` | `UnauthorizedException('Wrong password!')` | `AppException('AUTH_001')` |
-| `auth.service.ts:26` | `NotFoundException('User not found!')` | `AppException('AUTH_002')` |
-| `services/siwe.service.ts:87` | `BadRequestException('Malformed SIWE message')` | `AppException('AUTH_003')` |
-| `services/siwe.service.ts:93` | `BadRequestException('Nonce is missing')` | `AppException('AUTH_004')` |
-| `services/siwe.service.ts:103` | `BadRequestException('Address mismatch')` | `AppException('AUTH_005')` |
-| `services/siwe.service.ts:111` | `BadRequestException('Invalid nonce')` | `AppException('AUTH_006')` |
-| `services/siwe.service.ts:125` | `BadRequestException('Invalid signature')` | `AppException('AUTH_007')` |
+| `auth.service.ts:26` | `NotFoundException('User not found!')` | `AppException('USER_000')` |
+| `services/siwe.service.ts:87` | `BadRequestException('Malformed SIWE message')` | `AppException('AUTH_002')` |
+| `services/siwe.service.ts:93` | `BadRequestException('Nonce is missing')` | `AppException('AUTH_003')` |
+| `services/siwe.service.ts:103` | `BadRequestException('Address mismatch')` | `AppException('AUTH_004')` |
+| `services/siwe.service.ts:111` | `BadRequestException('Invalid nonce')` | `AppException('AUTH_005')` |
+| `services/siwe.service.ts:125` | `BadRequestException('Invalid signature')` | `AppException('AUTH_006')` |
 
 ## Data flow
 
@@ -206,11 +219,16 @@ Colocated under `__tests__/`, matching existing convention:
 
 ## Out of scope (follow-up work)
 
-- Migrating `user`, `app-config`, `core/base` (`BaseService`'s two
-  not-found throws — shared by every entity, needs a `COMMON_xxx` code
-  rather than a per-entity one), `core/guard` (`PoliciesGuard`'s
-  forbidden), and `core/modules/mail` to `AppException`. Each is a small,
-  independent follow-up once this pattern is reviewed in the auth module.
+- Migrating the rest of `user` (only `USER_000` exists, added because
+  `auth.service.ts` needed it — the module's own throw sites, e.g.
+  `user.service.ts`'s `BadRequestException('User Not Found')` and
+  `InternalServerErrorException`, are untouched and should reuse/extend the
+  `USER_xxx` group when they migrate), `app-config`, `core/base`
+  (`BaseService`'s two not-found throws — shared by every entity, needs a
+  `COMMON_xxx` code rather than a per-entity one), `core/guard`
+  (`PoliciesGuard`'s forbidden), and `core/modules/mail` to `AppException`.
+  Each is a small, independent follow-up once this pattern is reviewed in
+  the auth module.
 - Defining the `COMMON_xxx` prefix's actual codes — deferred until the
   first shared/generic call site migrates, so the codes are driven by real
   usage instead of guessed upfront.

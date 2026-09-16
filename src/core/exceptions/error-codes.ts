@@ -14,33 +14,35 @@ export const ERROR_CODES = [
   },
   {
     code: 'AUTH_002',
-    status: HttpStatus.NOT_FOUND,
-    message: 'User not found!',
-  },
-  {
-    code: 'AUTH_003',
     status: HttpStatus.BAD_REQUEST,
     message: 'Malformed SIWE message',
   },
   {
-    code: 'AUTH_004',
+    code: 'AUTH_003',
     status: HttpStatus.BAD_REQUEST,
     message: 'Nonce is missing',
   },
   {
-    code: 'AUTH_005',
+    code: 'AUTH_004',
     status: HttpStatus.BAD_REQUEST,
     message: 'Address mismatch',
   },
   {
-    code: 'AUTH_006',
+    code: 'AUTH_005',
     status: HttpStatus.BAD_REQUEST,
     message: 'Invalid nonce',
   },
   {
-    code: 'AUTH_007',
+    code: 'AUTH_006',
     status: HttpStatus.BAD_REQUEST,
     message: 'Invalid signature',
+  },
+  // USER — src/api/user, and any lookup of a User entity by identity
+  // (e.g. AuthService looking a user up by username during login)
+  {
+    code: 'USER_000',
+    status: HttpStatus.NOT_FOUND,
+    message: 'User not found!',
   },
 ] as const satisfies { code: string; status: HttpStatus; message: string }[];
 

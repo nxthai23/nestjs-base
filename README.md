@@ -163,7 +163,7 @@ field to the envelope:
 ```typescript
 import { AppException } from '@core/exceptions/app.exception';
 
-if (!user) throw new AppException('AUTH_002');
+if (!user) throw new AppException('USER_000');
 ```
 
 ```json

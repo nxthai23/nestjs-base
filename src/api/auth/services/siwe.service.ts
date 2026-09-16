@@ -85,13 +85,13 @@ export class SiweService {
     try {
       siweMessage = new SiweMessage(message);
     } catch {
-      throw new AppException('AUTH_003');
+      throw new AppException('AUTH_002');
     }
 
     const nonce = siweMessage.nonce;
 
     if (!nonce) {
-      throw new AppException('AUTH_004');
+      throw new AppException('AUTH_003');
     }
 
     // The signature is checked against the address *inside* the message, while
@@ -101,7 +101,7 @@ export class SiweService {
     // other wallet authenticated. Compared case-insensitively because clients
     // send addresses both checksummed and lowercased.
     if (!isSameAddress(siweMessage.address, walletAddress)) {
-      throw new AppException('AUTH_005');
+      throw new AppException('AUTH_004');
     }
 
     const issuedNonce = await this.nonces.get<string>(walletAddress);
@@ -109,7 +109,7 @@ export class SiweService {
     // The nonce carried by the message is attacker-controlled, so proving one
     // exists for this wallet is not enough — it has to be the one we issued.
     if (!issuedNonce || issuedNonce !== nonce) {
-      throw new AppException('AUTH_006');
+      throw new AppException('AUTH_005');
     }
 
     const isValidSignature = await this.publicClient.verifySiweMessage({
@@ -123,7 +123,7 @@ export class SiweService {
     });
 
     if (!isValidSignature) {
-      throw new AppException('AUTH_007');
+      throw new AppException('AUTH_006');
     }
 
     // Consume the nonce. Without this the same signature verifies again for
