@@ -16,9 +16,6 @@ import { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from './base.constant';
 /**
  * Base service class that implements common CRUD operations
  * @template T - The entity type (extends BaseEntity)
- * @template CreateDTO - The DTO type for creation
- * @template UpdateDTO - The DTO type for updates
- * @template IdType - The type of entity ID (string | ObjectId | number)
  */
 export abstract class BaseService<
   T extends BaseEntity,
@@ -26,16 +23,12 @@ export abstract class BaseService<
   protected entityName: string;
 
   constructor(private repository: EntityRepository<T>) {
-    // Extract entity name from repository metadata
     this.entityName = this.repository.getEntityName();
   }
 
-  /**
-   * Resolves to the fork MikroORM's RequestContext middleware created for
-   * the current request (see AsyncLocalStorage in @mikro-orm/nestjs). Never
-   * cache this in a field: services are singletons, so a cached fork would
-   * be shared by every request instead of scoped to one.
-   */
+  // The repository resolves the right per-request fork internally
+  // (MikroORM RequestContext/AsyncLocalStorage), so this is safe to call
+  // on every access instead of caching.
   protected get em(): EntityManager {
     return this.repository.getEntityManager();
   }
@@ -81,8 +74,7 @@ export abstract class BaseService<
       populate: options?.populate,
     });
 
-    // meta.limit must be a number; when paginate is false, limit is
-    // undefined (no cap was applied), so report the actual result size.
+    // paginate=false leaves limit undefined; report the actual result size
     const metaLimit = limit ?? total;
     return {
       items,
@@ -107,7 +99,7 @@ export abstract class BaseService<
   }
 
   /**
-   * Write section - Optimized for better performance
+   * Write section
    */
 
   async create(dto: RequiredEntityData<T>): Promise<T> {
@@ -122,10 +114,8 @@ export abstract class BaseService<
       return true;
     }
 
-    // em.transactional() flushes the inner (forked) EM before commit, so no
-    // separate flush is needed here — and it must be awaited, otherwise the
-    // transaction runs detached: the method could resolve before the insert
-    // completes, and a failure inside it becomes an unhandled rejection.
+    // Must be awaited: transactional() flushes and commits on its own,
+    // so an unawaited call can resolve early and swallow errors.
     await this.em.transactional(async (em) => {
       const entities = dtos.map((dto) => this.repository.create(dto));
       entities.forEach((entity) => em.persist(entity));
@@ -135,13 +125,11 @@ export abstract class BaseService<
 
   async update<IdType>(id: IdType, dto: Partial<T>): Promise<T> {
     return await this.em.transactional(async (em) => {
-      // Use reference for better performance if we don't need the full entity
       const entity = await this.repository.findOne(id);
       if (!entity) {
         throw new NotFoundException(`${this.entityName} not found`);
       }
 
-      // Assign new values using wrap for change tracking
       wrap(entity).assign(dto as any);
       await em.flush();
       return entity;
@@ -185,41 +173,20 @@ export abstract class BaseService<
   }
 
   /**
-   * Execute a callback within a transaction.
-   * All EM operations inside `fn` are scoped to the same transaction.
-   * Auto-commits on success, auto-rollbacks on error.
-   * Works for both PostgreSQL (native) and MongoDB (replica set required).
-   *
-   * @example
-   * ```ts
-   * const result = await this.withTransaction(async (tx) => {
-   *   const user = await tx.findOne(User, userId);
-   *   user.balance -= amount;
-   *   await tx.flush();
-   *
-   *   const invoice = tx.create(Invoice, { ... });
-   *   tx.persist(invoice);
-   *   await tx.flush();
-   *
-   *   return invoice;
-   * });
-   * ```
+   * Runs `fn` in a transaction: auto-commits on success, rolls back on
+   * error. Works for PostgreSQL (native) and MongoDB (replica set required).
    */
   async withTransaction<R>(fn: (em: EntityManager) => Promise<R>): Promise<R> {
     return await this.em.transactional(async (em) => {
-      // Use the forked EM for all operations within the callback
       return await fn(em as EntityManager);
     });
   }
 
   /**
-   * Mixed section - Raw aggregation/query for MongoDB and PostgreSQL
-   *
-   * MongoDB: pass a Document[] pipeline. Include $limit, $facet, etc. in pipeline.
-   * PostgreSQL: pass a raw SQL string. Include LIMIT, OFFSET in the query.
+   * Mixed section - raw aggregation/query.
+   * MongoDB: Document[] pipeline. PostgreSQL: raw SQL string.
    */
   async aggregate<R = any>(query: object[] | string): Promise<R[]> {
-    // MongoDB pipeline (array of stages)
     if (Array.isArray(query)) {
       const mongoEm = this.em as MongoEntityManager;
       return (await mongoEm.aggregate(
@@ -228,7 +195,6 @@ export abstract class BaseService<
       )) as R[];
     }
 
-    // PostgreSQL raw SQL
     const conn = this.em.getConnection();
     return (await conn.execute(query)) as R[];
   }
