@@ -116,7 +116,6 @@ export abstract class BaseService<
 
   async create(dto: RequiredEntityData<T>): Promise<T> {
     const entity = this.repository.create(dto);
-    // Use cached EntityManager and persist without immediate flush for better performance
     this.em.persist(entity);
     await this.em.flush();
     return entity;
@@ -127,14 +126,14 @@ export abstract class BaseService<
       return true;
     }
 
-    // Use transaction for bulk operations to ensure atomicity and better performance
-    this.em.transactional(async (em) => {
+    // em.transactional() flushes the inner (forked) EM before commit, so no
+    // separate flush is needed here — and it must be awaited, otherwise the
+    // transaction runs detached: the method could resolve before the insert
+    // completes, and a failure inside it becomes an unhandled rejection.
+    await this.em.transactional(async (em) => {
       const entities = dtos.map((dto) => this.repository.create(dto));
-      // Persist all entities in memory first
       entities.forEach((entity) => em.persist(entity));
     });
-    // Single flush operation for all entities
-    await this.em.flush();
     return true;
   }
 
