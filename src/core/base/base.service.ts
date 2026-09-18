@@ -26,9 +26,10 @@ export abstract class BaseService<
     this.entityName = this.repository.getEntityName();
   }
 
-  // The repository resolves the right per-request fork internally
-  // (MikroORM RequestContext/AsyncLocalStorage), so this is safe to call
-  // on every access instead of caching.
+  // repository.getEntityManager() always returns the same instance; the
+  // per-request/transaction scoping happens inside EntityManager's own
+  // methods (AsyncLocalStorage), not here — caching this in a field would
+  // behave identically.
   protected get em(): EntityManager {
     return this.repository.getEntityManager();
   }
@@ -104,8 +105,9 @@ export abstract class BaseService<
 
   async create(dto: RequiredEntityData<T>): Promise<T> {
     const entity = this.repository.create(dto);
-    this.em.persist(entity);
-    await this.em.flush();
+    const em = this.em;
+    em.persist(entity);
+    await em.flush();
     return entity;
   }
 
