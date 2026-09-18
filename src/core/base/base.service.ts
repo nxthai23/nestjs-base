@@ -24,14 +24,22 @@ export abstract class BaseService<
   T extends BaseEntity,
 > implements IBaseService<T> {
   protected entityName: string;
-  protected em: EntityManager;
 
   constructor(private repository: EntityRepository<T>) {
     // Extract entity name from repository metadata
     this.entityName = this.repository.getEntityName();
-    // Cache EntityManager reference for better performance
-    this.em = this.repository.getEntityManager();
   }
+
+  /**
+   * Resolves to the fork MikroORM's RequestContext middleware created for
+   * the current request (see AsyncLocalStorage in @mikro-orm/nestjs). Never
+   * cache this in a field: services are singletons, so a cached fork would
+   * be shared by every request instead of scoped to one.
+   */
+  protected get em(): EntityManager {
+    return this.repository.getEntityManager();
+  }
+
   /**
    * Manage section
    */
