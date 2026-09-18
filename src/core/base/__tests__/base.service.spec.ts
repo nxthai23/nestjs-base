@@ -144,20 +144,20 @@ describe('BaseService.find', () => {
 
 describe('BaseService.bulkCreate', () => {
   function makeService(transactional: (...args: any[]) => Promise<any>) {
+    const em = { transactional: vi.fn(transactional) };
     const repository = {
       getEntityName: () => 'TestEntity',
-      getEntityManager: () => ({ transactional: vi.fn(transactional) }),
+      getEntityManager: () => em,
       create: vi.fn((dto: any) => ({ ...dto })),
     } as any;
-    return { service: new TestService(repository), repository };
+    return { service: new TestService(repository), repository, em };
   }
 
   it('returns true without starting a transaction for an empty batch', async () => {
-    const transactional = vi.fn();
-    const { service, repository } = makeService(transactional);
+    const { service, em } = makeService(vi.fn());
 
     await expect(service.bulkCreate([])).resolves.toBe(true);
-    expect(repository.getEntityManager().transactional).not.toHaveBeenCalled();
+    expect(em.transactional).not.toHaveBeenCalled();
   });
 
   it('persists every created entity inside the transaction', async () => {
