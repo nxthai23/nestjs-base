@@ -43,10 +43,6 @@ export abstract class BaseService<
   /**
    * Manage section
    */
-  getEntityManager(): EntityManager {
-    return this.em;
-  }
-
   getRepository(): EntityRepository<T> {
     return this.repository;
   }
