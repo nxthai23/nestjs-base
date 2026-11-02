@@ -142,6 +142,51 @@ describe('BaseService.find', () => {
   });
 });
 
+describe('BaseService.bulkCreate', () => {
+  function makeService(transactional: (...args: any[]) => Promise<any>) {
+    const em = { transactional: vi.fn(transactional) };
+    const repository = {
+      getEntityName: () => 'TestEntity',
+      getEntityManager: () => em,
+      create: vi.fn((dto: any) => ({ ...dto })),
+    } as any;
+    return { service: new TestService(repository), repository, em };
+  }
+
+  it('returns true without starting a transaction for an empty batch', async () => {
+    const { service, em } = makeService(vi.fn());
+
+    await expect(service.bulkCreate([])).resolves.toBe(true);
+    expect(em.transactional).not.toHaveBeenCalled();
+  });
+
+  it('persists every created entity inside the transaction', async () => {
+    const persist = vi.fn();
+    const { service, repository } = makeService(async (cb: any) =>
+      cb({ persist }),
+    );
+
+    const result = await service.bulkCreate([
+      { name: 'a' },
+      { name: 'b' },
+    ] as any);
+
+    expect(result).toBe(true);
+    expect(repository.create).toHaveBeenCalledTimes(2);
+    expect(persist).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates a transaction failure instead of resolving true', async () => {
+    const { service } = makeService(() =>
+      Promise.reject(new Error('tx failed')),
+    );
+
+    await expect(service.bulkCreate([{ name: 'a' }] as any)).rejects.toThrow(
+      'tx failed',
+    );
+  });
+});
+
 describe('BaseService.findAll', () => {
   it('delegates to find({}, options, paginate)', async () => {
     const items = [{ id: '1' }];

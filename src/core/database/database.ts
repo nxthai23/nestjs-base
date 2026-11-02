@@ -23,12 +23,9 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
     const baseOptions = {
       metadataProvider: ReflectMetadataProvider,
       cache: { enabled: false },
-      loadStrategy: LoadStrategy.JOINED,
       debug: nodeEnv !== 'production',
       // Listed, not globbed - see ENTITIES for why.
       entities: ENTITIES,
-      // Entities registered through MikroOrmModule.forFeature are added too.
-      autoloadEntities: true,
       migrations: {
         path: join(process.cwd(), 'dist', 'migrations'),
         pathTs: join(process.cwd(), 'src', 'migrations'),
@@ -76,6 +73,9 @@ export class DatabaseConfig implements MikroOrmOptionsFactory {
         return {
           ...baseOptions,
           driver: PostgreSqlDriver,
+          // MongoPlatform forces 'select-in' unconditionally (no joins in
+          // Mongo), so this only applies here.
+          loadStrategy: LoadStrategy.JOINED,
           host:
             this.configService.get<string>('database.postgresHost') ||
             'localhost',
